@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const URL = "https://aadhavmadhav.netlify.app/api";
+const URL = "https://aadhavmadhav.onrender.com/api";
 
 setInterval(async () => {
     try {

@@ -19,7 +19,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: 'https://aadhavmadhav.netlify.app',
+        origin: 'https://aadhavmadhav.onrender.com',
         methods: ['GET', 'POST'],
     },
 });
@@ -57,7 +57,7 @@ io.on('connection', (socket) => {
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-    origin: 'https://aadhavmadhav.netlify.app',
+    origin: 'https://aadhavmadhav.onrender.com',
     credentials: true,
 }));
 
@@ -78,6 +78,17 @@ app.use('/api/orders', require('./src/routes/orderRoutes'));
 app.use('/api/upload', require('./src/routes/uploadRoutes'));
 app.use('/api/messages', require('./src/routes/messageRoutes'));
 app.use('/api/analytics', require('./src/routes/analyticsRoutes'));
+
+
+if(process.env.NODE_ENV==="production"){
+  app.use(express.static(path.join(__dirname,"../client/dist")));
+
+
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.resolve(__dirname, "../client/dist/index.html"));
+});
+
+}
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

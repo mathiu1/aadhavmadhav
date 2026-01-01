@@ -65,7 +65,7 @@ app.use(cors({
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 
 // Routes (Placeholders)
-app.get('/', (req, res) => {
+app.get('/api/ping', (req, res) => {
     res.send('API is running...');
 });
 

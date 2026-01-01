@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import { FiMenu, FiX } from 'react-icons/fi';
 
@@ -21,9 +21,9 @@ const AdminLayout = () => {
                     >
                         {isSidebarOpen ? <FiX size={24} /> : <FiMenu size={24} />}
                     </button>
-                    <div className="font-black text-xl italic tracking-tighter">
+                    <Link to="/" className="font-black text-xl italic tracking-tighter">
                         <span className="text-primary">▲ Aadhav</span>Madhav
-                    </div>
+                    </Link>
                 </header>
 
                 <main className="flex-1 lg:ml-64 p-4 md:p-8">

@@ -133,7 +133,61 @@ const ProductPage = () => {
         setTimeout(() => setAdded(false), 2000);
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-500 font-medium">Loading details...</div>;
+    if (loading) return (
+        <div className="max-w-7xl mx-auto pt-6 px-4 pb-20 overflow-x-hidden animate-pulse">
+            <div className="h-6 w-32 bg-slate-200 rounded mb-8"></div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 mb-20">
+                {/* Image Skeleton */}
+                <div className="flex flex-col md:flex-row gap-6 lg:gap-8">
+                    <div className="flex flex-row md:flex-col gap-4 order-2 md:order-1">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="w-20 h-20 md:w-24 md:h-24 bg-slate-200 rounded-2xl shrink-0"></div>
+                        ))}
+                    </div>
+                    <div className="flex-1 bg-slate-200 rounded-[2rem] h-[500px] order-1 md:order-2 relative"></div>
+                </div>
+
+                {/* Details Skeleton */}
+                <div className="space-y-8 py-4">
+                    <div>
+                        <div className="flex gap-2 mb-4">
+                            <div className="h-6 w-20 bg-slate-200 rounded-full"></div>
+                            <div className="h-6 w-24 bg-slate-200 rounded-full"></div>
+                        </div>
+                        <div className="h-10 md:h-14 w-3/4 bg-slate-200 rounded-xl mb-4"></div>
+                        <div className="flex items-center gap-4">
+                            <div className="h-5 w-32 bg-slate-200 rounded"></div>
+                            <div className="h-5 w-24 bg-slate-200 rounded"></div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="h-12 w-40 bg-slate-200 rounded-xl"></div>
+                        <div className="h-8 w-24 bg-slate-200 rounded-lg"></div>
+                    </div>
+
+                    <div className="space-y-3 max-w-xl">
+                        <div className="h-4 w-full bg-slate-200 rounded"></div>
+                        <div className="h-4 w-full bg-slate-200 rounded"></div>
+                        <div className="h-4 w-2/3 bg-slate-200 rounded"></div>
+                    </div>
+
+                    <div className="h-px bg-slate-100 w-full"></div>
+
+                    <div className="flex flex-col md:flex-row gap-4 md:gap-6 h-16">
+                        <div className="w-full md:w-32 bg-slate-200 rounded-xl"></div>
+                        <div className="w-full md:flex-1 bg-slate-200 rounded-xl"></div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-4">
+                        <div className="h-20 bg-slate-50 rounded-xl"></div>
+                        <div className="h-20 bg-slate-50 rounded-xl"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
     if (error) return <div className="text-center mt-20 text-red-500">{error}</div>;
 
     return (
@@ -206,7 +260,7 @@ const ProductPage = () => {
 
                     <div className="flex items-center gap-4 mb-6">
                         <span className="text-4xl md:text-5xl font-black text-slate-900">{formatCurrency(product.price)}</span>
-                        {product.oldPrice && product.oldPrice > product.price && (
+                        {product.oldPrice > product.price && (
                             <div className="flex flex-col">
                                 <span className="text-lg md:text-xl text-slate-400 line-through decoration-slate-400">{formatCurrency(product.oldPrice)}</span>
                                 <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
@@ -259,7 +313,7 @@ const ProductPage = () => {
                             <div className="p-2 bg-white rounded-lg shadow-sm">🚚</div>
                             <div>
                                 <p className="font-bold text-slate-900 text-sm">Free Delivery</p>
-                                <p className="text-xs text-slate-500">Orders over {formatCurrency(50)}</p>
+                                <p className="text-xs text-slate-500">Orders over {formatCurrency(500)}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">

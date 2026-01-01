@@ -77,6 +77,7 @@ const UserListPage = () => {
     }, [searchTerm]);
 
     useEffect(() => {
+        window.scrollTo(0, 0);
         dispatch(listUsers({ keyword, pageNumber, pageSize }));
     }, [dispatch, keyword, pageNumber, pageSize]);
 
@@ -206,10 +207,31 @@ const UserListPage = () => {
             </div>
 
             {loading ? (
-                <div className="flex justify-center items-center h-96">
-                    <div className="relative w-20 h-20">
-                        <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
-                        <div className="absolute inset-0 border-4 border-primary rounded-full animate-spin border-t-transparent"></div>
+                <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden animate-pulse">
+                    <div className="p-4 md:p-6 border-b border-slate-100 bg-slate-50/50">
+                        <div className="flex justify-between gap-4">
+                            <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                            <div className="h-4 w-24 bg-slate-200 rounded hidden md:block"></div>
+                            <div className="h-4 w-24 bg-slate-200 rounded hidden md:block"></div>
+                            <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                        </div>
+                    </div>
+                    <div className="p-4">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="flex items-center gap-4 py-4 border-b border-slate-50 last:border-0">
+                                <div className="w-12 h-12 md:w-14 md:h-14 bg-slate-200 rounded-2xl shrink-0"></div>
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-4 w-3/4 md:w-40 bg-slate-200 rounded"></div>
+                                    <div className="h-3 w-1/2 md:w-48 bg-slate-200 rounded hidden sm:block"></div>
+                                </div>
+                                <div className="h-8 w-8 bg-slate-200 rounded-full hidden md:block"></div>
+                                <div className="h-8 w-24 bg-slate-200 rounded-full hidden md:block"></div>
+                                <div className="flex gap-2">
+                                    <div className="w-8 h-8 bg-slate-200 rounded-xl"></div>
+                                    <div className="w-8 h-8 bg-slate-200 rounded-xl"></div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             ) : error ? (
@@ -250,11 +272,23 @@ const UserListPage = () => {
                                                     <a href={`mailto:${user.email} `} className="text-[10px] md:text-xs font-bold text-slate-400 flex items-center gap-1.5 mt-0.5 hover:text-primary transition-colors">
                                                         <FiMail size={12} /> {user.email}
                                                     </a>
-                                                    <div className="flex items-center gap-1.5 mt-1">
-                                                        <div className={`w - 1.5 h - 1.5 rounded - full ${onlineUsers.includes(user._id) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-slate-300'} `}></div>
-                                                        <span className="text-[10px] font-bold text-slate-400">
-                                                            {onlineUsers.includes(user._id) ? 'Online now' : `Seen ${formatLastSeen(user.lastSeen)} `}
-                                                        </span>
+                                                    <div className="mt-1.5">
+                                                        {onlineUsers.includes(user._id) ? (
+                                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                                <span className="relative flex h-2 w-2">
+                                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                                </span>
+                                                                <span className="text-[10px] font-black uppercase tracking-wide">Online</span>
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1.5 text-slate-400">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                                                <span className="text-[10px] font-bold">
+                                                                    Seen {formatLastSeen(user.lastSeen)}
+                                                                </span>
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

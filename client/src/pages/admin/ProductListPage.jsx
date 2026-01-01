@@ -53,6 +53,10 @@ const ProductListPage = () => {
     }, [filterStatus, searchQuery, filterCategory]);
 
     useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [currentPage]);
+
+    useEffect(() => {
         if (deleteSuccess) {
             setActionModal({ isOpen: false, id: null, type: 'soft' });
             dispatch(fetchProducts({ pageNumber, pageSize: 100, showAll: true }));
@@ -264,10 +268,30 @@ const ProductListPage = () => {
             )}
 
             {isLoading || deleteLoading ? (
-                <div className="flex justify-center items-center h-96">
-                    <div className="relative w-20 h-20">
-                        <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
-                        <div className="absolute inset-0 border-4 border-primary rounded-full animate-spin border-t-transparent"></div>
+                <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden animate-pulse">
+                    <div className="p-4 md:p-6 border-b border-slate-100 bg-slate-50/50">
+                        <div className="flex justify-between">
+                            <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                            <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                            <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                        </div>
+                    </div>
+                    <div className="p-4">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="flex items-center gap-4 py-4 border-b border-slate-50 last:border-0">
+                                <div className="w-16 h-16 bg-slate-200 rounded-2xl shrink-0"></div>
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-4 w-3/4 md:w-48 bg-slate-200 rounded"></div>
+                                    <div className="h-3 w-1/2 md:w-24 bg-slate-200 rounded"></div>
+                                </div>
+                                <div className="h-8 w-20 bg-slate-200 rounded-lg hidden md:block"></div>
+                                <div className="h-6 w-16 bg-slate-200 rounded hidden md:block"></div>
+                                <div className="flex gap-2">
+                                    <div className="w-10 h-10 bg-slate-200 rounded-xl"></div>
+                                    <div className="w-10 h-10 bg-slate-200 rounded-xl"></div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             ) : error ? (

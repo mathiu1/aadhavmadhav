@@ -52,8 +52,37 @@ const ProfilePage = () => {
                     </h2>
 
                     {loading ? (
-                        <div className="flex justify-center p-12">
-                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                        <div className="space-y-4 animate-pulse">
+                            {[...Array(3)].map((_, i) => (
+                                <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                                    <div className="flex flex-wrap justify-between items-start gap-4 mb-4 border-b border-slate-100 pb-4">
+                                        <div className="space-y-2">
+                                            <div className="h-3 w-16 bg-slate-200 rounded"></div>
+                                            <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="h-3 w-16 bg-slate-200 rounded"></div>
+                                            <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="h-3 w-16 bg-slate-200 rounded"></div>
+                                            <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="h-3 w-16 bg-slate-200 rounded"></div>
+                                            <div className="h-6 w-24 bg-slate-200 rounded-full"></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex -space-x-3">
+                                            {[...Array(3)].map((_, idx) => (
+                                                <div key={idx} className="h-12 w-12 rounded-full ring-2 ring-white bg-slate-200"></div>
+                                            ))}
+                                        </div>
+                                        <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     ) : error ? (
                         <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100">{error}</div>

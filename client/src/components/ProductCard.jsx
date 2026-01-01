@@ -117,7 +117,7 @@ const ProductCard = ({ product }) => {
                 <div className="mt-auto flex justify-between items-center">
                     <div className="flex items-baseline gap-1 md:gap-2">
                         <span className="text-base md:text-lg font-bold text-slate-900">{formatCurrency(product.price)}</span>
-                        {product.oldPrice > 0 && (
+                        {product.oldPrice > product.price && (
                             <span className="text-xs md:text-sm text-slate-400 line-through decoration-slate-400">{formatCurrency(product.oldPrice)}</span>
                         )}
                     </div>

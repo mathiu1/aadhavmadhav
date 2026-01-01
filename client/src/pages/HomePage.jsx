@@ -8,26 +8,26 @@ import { FaFire, FaArrowRight, FaStar } from 'react-icons/fa';
 const slides = [
     {
         id: 1,
-        badge: '🚀 New Spring Collection 2025',
-        title: <>Elevate Your <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Lifestyle.</span></>,
-        desc: 'Discover premium crackers, unique apparel, and exotic nuts. Curated for those who demand the best.',
-        image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000&auto=format&fit=crop',
+        badge: '✨ Trendsetting Fashion',
+        title: <>Wear Your <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Vibe.</span></>,
+        desc: 'Premium t-shirts and apparel crafted for comfort and style. Upgrade your wardrobe with our latest 2025 collection.',
+        image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000&auto=format&fit=crop', // Fashion/Apparel image
         bgColor: 'from-purple-50 to-pink-50'
     },
     {
         id: 2,
-        badge: '💥 Maximum Impact',
-        title: <>Light Up <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-600">The Sky.</span></>,
-        desc: 'Premium range of sky-shots and sparklers. Safe, loud, and incredibly colorful.',
-        image: 'https://images.unsplash.com/photo-1498931299472-f7a63a5a1cfa?q=80&w=1000&auto=format&fit=crop', // Cracker image
+        badge: '🎆 Celebration Special',
+        title: <>Ignite The <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-600">Celebration.</span></>,
+        desc: 'Dazzling sky-shots and premium crackers for your special moments. Safe, loud, and spectacularly colorful.',
+        image: 'https://images.unsplash.com/photo-1538374184611-910aa0465442?q=80&w=1624&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // Cracker image
         bgColor: 'from-orange-50 to-red-50'
     },
     {
         id: 3,
-        badge: '🥜 Healthy & Crunchy',
-        title: <>Nature's Best <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-yellow-600">Superfod.</span></>,
-        desc: 'Handpicked cashews, walnuts and almonds. The perfect clear energy boost.',
-        image: 'https://images.unsplash.com/photo-1536591375315-1988d69605f8?q=80&w=1000&auto=format&fit=crop', // Nuts image
+        badge: '🌿 Premium Nutrition',
+        title: <>The Art of <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-yellow-600">Healthy Snacking.</span></>,
+        desc: 'Hand-selected almonds, cashews, and walnuts. The perfect blend of taste and vitality for your active lifestyle.',
+        image: 'https://images.unsplash.com/photo-1542990253-a781e04c0082?q=80&w=1094&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // Nuts image
         bgColor: 'from-amber-50 to-yellow-50'
     }
 ];
@@ -242,7 +242,7 @@ const HomePage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 h-auto md:h-[500px]">
                     {/* Large Main Category - Apparel */}
                     <Link to="/products" className="md:col-span-2 md:row-span-2 group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[200px] md:h-auto">
-                        <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=800&auto=format&fit=crop" alt="Apparel" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <img src="https://plus.unsplash.com/premium_photo-1701204056531-f82d31308f1f?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Apparel" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                         <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8 text-white">
                             <p className="text-[10px] md:text-sm font-bold bg-white/20 backdrop-blur-md inline-block px-2 md:px-3 py-1 rounded-lg mb-1 md:mb-2">Custom Fit</p>
@@ -253,7 +253,7 @@ const HomePage = () => {
 
                     {/* Crackers */}
                     <Link to="/products" className="md:col-span-1 md:row-span-2 group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[180px] md:h-auto">
-                        <img src="https://img.freepik.com/free-vector/pyrotechnics-fireworks-background-with-animation-black_1284-54175.jpg?semt=ais_hybrid&w=740&q=80" alt="Crackers" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <img src="https://images.unsplash.com/photo-1563303313-93627cc2a1aa?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Crackers" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                         <div className="absolute bottom-4 left-4 text-white">
                             <h3 className="text-xl md:text-2xl font-bold mb-1">Crackers</h3>
@@ -263,7 +263,7 @@ const HomePage = () => {
 
                     {/* Nuts - Top */}
                     <Link to="/products" className="md:col-span-1 md:row-span-1 group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[150px] md:h-auto">
-                        <img src="https://images.unsplash.com/photo-1623428187969-5da2dcea5ebf?q=80&w=800&auto=format&fit=crop" alt="Nuts" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <img src="https://plus.unsplash.com/premium_photo-1726768984120-f476b15835f2?q=80&w=1169&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Nuts" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                         <div className="absolute bottom-4 left-4 text-white">
                             <h3 className="text-xl md:text-2xl font-bold mb-1">Nuts & Dry Fruits</h3>
@@ -299,8 +299,20 @@ const HomePage = () => {
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center p-12">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                    <div className="space-y-12 animate-pulse">
+                        <div className="flex gap-4 md:gap-6 overflow-hidden p-2 md:p-4">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="min-w-[240px] md:min-w-[320px] h-80 bg-slate-200 rounded-2xl shrink-0"></div>
+                            ))}
+                        </div>
+                        <div className="space-y-6">
+                            <div className="h-8 w-48 bg-slate-200 rounded-full mx-4"></div>
+                            <div className="flex gap-4 md:gap-6 overflow-hidden p-2 md:p-4">
+                                {[...Array(5)].map((_, i) => (
+                                    <div key={i} className="min-w-[240px] md:min-w-[320px] h-80 bg-slate-200 rounded-2xl shrink-0"></div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <>
@@ -323,7 +335,7 @@ const HomePage = () => {
                                                 Best of {category} collection
                                             </p>
                                         </div>
-                                        <Link to={`/products`} className="text-primary hover:text-primary-light transition-colors font-bold flex items-center gap-1 text-sm md:text-base">
+                                        <Link to={`/category/${category}`} className="text-primary hover:text-primary-light transition-colors font-bold flex items-center gap-1 text-sm md:text-base">
                                             View All <FaArrowRight className="text-xs" />
                                         </Link>
                                     </div>

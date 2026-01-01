@@ -34,6 +34,7 @@ import { checkAuth } from './slices/authSlice';
 import api from './api/axios';
 
 import ChatWidget from './components/ChatWidget';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   const dispatch = useDispatch();
@@ -69,6 +70,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <NetworkStatus />
       <ErrorBoundary>
         <Toaster position="top-center" reverseOrder={false} />
@@ -93,7 +95,7 @@ function App() {
                   <footer className="glass-panel py-8 text-center text-slate-500 mt-auto border-t border-slate-200">
                     <div className="container mx-auto px-4">
                       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <p>&copy; 2025 AadhavMadhav Ecom. All rights reserved.</p>
+                        <p>&copy; 2025 Aadhav Madhav Ecom. All rights reserved.</p>
                         <div className="flex gap-4">
                           <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
                           <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>

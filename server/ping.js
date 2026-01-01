@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const URL = "https://aadhavmadhav.onrender.com/api";
+const URL = "https://aadhavmadhav.onrender.com/api/ping";
 
 setInterval(async () => {
     try {

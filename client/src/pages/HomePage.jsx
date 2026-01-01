@@ -241,7 +241,7 @@ const HomePage = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 h-auto md:h-[500px]">
                     {/* Large Main Category - Apparel */}
-                    <Link to="/category/custom-tshirts" className="md:col-span-2 md:row-span-2 group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[200px] md:h-auto">
+                    <Link to="/products" className="md:col-span-2 md:row-span-2 group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[200px] md:h-auto">
                         <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=800&auto=format&fit=crop" alt="Apparel" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                         <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8 text-white">
@@ -252,7 +252,7 @@ const HomePage = () => {
                     </Link>
 
                     {/* Crackers */}
-                    <Link to="/category/crackers" className="md:col-span-1 md:row-span-2 group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[180px] md:h-auto">
+                    <Link to="/products" className="md:col-span-1 md:row-span-2 group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[180px] md:h-auto">
                         <img src="https://img.freepik.com/free-vector/pyrotechnics-fireworks-background-with-animation-black_1284-54175.jpg?semt=ais_hybrid&w=740&q=80" alt="Crackers" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                         <div className="absolute bottom-4 left-4 text-white">
@@ -262,7 +262,7 @@ const HomePage = () => {
                     </Link>
 
                     {/* Nuts - Top */}
-                    <Link to="/category/nuts" className="md:col-span-1 md:row-span-1 group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[150px] md:h-auto">
+                    <Link to="/products" className="md:col-span-1 md:row-span-1 group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[150px] md:h-auto">
                         <img src="https://images.unsplash.com/photo-1623428187969-5da2dcea5ebf?q=80&w=800&auto=format&fit=crop" alt="Nuts" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                         <div className="absolute bottom-4 left-4 text-white">
@@ -323,7 +323,7 @@ const HomePage = () => {
                                                 Best of {category} collection
                                             </p>
                                         </div>
-                                        <Link to={`/category/${category}`} className="text-primary hover:text-primary-light transition-colors font-bold flex items-center gap-1 text-sm md:text-base">
+                                        <Link to={`/products`} className="text-primary hover:text-primary-light transition-colors font-bold flex items-center gap-1 text-sm md:text-base">
                                             View All <FaArrowRight className="text-xs" />
                                         </Link>
                                     </div>

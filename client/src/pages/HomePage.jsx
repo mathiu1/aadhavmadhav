@@ -335,7 +335,7 @@ const HomePage = () => {
                                                 Best of {category} collection
                                             </p>
                                         </div>
-                                        <Link to={`/category/${category}`} className="text-primary hover:text-primary-light transition-colors font-bold flex items-center gap-1 text-sm md:text-base">
+                                        <Link to={`/products`} className="text-primary hover:text-primary-light transition-colors font-bold flex items-center gap-1 text-sm md:text-base">
                                             View All <FaArrowRight className="text-xs" />
                                         </Link>
                                     </div>

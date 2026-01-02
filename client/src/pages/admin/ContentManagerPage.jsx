@@ -153,7 +153,7 @@ const ContentManagerPage = () => {
     };
 
     const requestAddSlide = () => {
-        setModal({ isOpen: true, type: 'add' });
+        setModal({ isOpen: true, type: 'add-hero' });
     };
 
     const requestRemoveSlide = (index) => {
@@ -161,7 +161,15 @@ const ContentManagerPage = () => {
             toast.error("You must have at least one hero slide.");
             return;
         }
-        setModal({ isOpen: true, type: 'delete', index });
+        setModal({ isOpen: true, type: 'delete-hero', index });
+    };
+
+    const requestAddCard = () => {
+        setModal({ isOpen: true, type: 'add-card' });
+    };
+
+    const requestRemoveCard = (index) => {
+        setModal({ isOpen: true, type: 'delete-card', index });
     };
 
     // Action Executor
@@ -175,7 +183,7 @@ const ContentManagerPage = () => {
                 shippingPrice: Number(shippingPrice)
             }));
             toast.success("Content updated successfully!");
-        } else if (modal.type === 'add') {
+        } else if (modal.type === 'add-hero') {
             const newSlide = {
                 badge: 'New Arrival',
                 title: 'New Collection',
@@ -192,10 +200,26 @@ const ContentManagerPage = () => {
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             }, 100);
 
-        } else if (modal.type === 'delete') {
+        } else if (modal.type === 'delete-hero') {
             const newSlides = heroSlides.filter((_, i) => i !== modal.index);
             setHeroSlides(newSlides);
             toast.success("Slide removed.");
+        } else if (modal.type === 'add-card') {
+            const newCard = {
+                id: `Card ${categoryCards.length + 1}`,
+                title: 'New Category',
+                subtitle: 'Trending',
+                image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2',
+                link: '/products',
+                buttonText: 'View More',
+                isEnabled: true
+            };
+            setCategoryCards([...categoryCards, newCard]);
+            toast.success("New card added!");
+        } else if (modal.type === 'delete-card') {
+            const newCards = categoryCards.filter((_, i) => i !== modal.index);
+            setCategoryCards(newCards);
+            toast.success("Card removed.");
         }
         closeModal();
     };
@@ -225,7 +249,7 @@ const ContentManagerPage = () => {
                     btnColor: 'bg-primary hover:bg-primary-dark',
                     actionLabel: 'Save Changes'
                 };
-            case 'add':
+            case 'add-hero':
                 return {
                     title: 'Add New Banner?',
                     message: 'This will add a new default slide to your hero section.',
@@ -235,7 +259,7 @@ const ContentManagerPage = () => {
                     btnColor: 'bg-green-500 hover:bg-green-600',
                     actionLabel: 'Add Banner'
                 };
-            case 'delete':
+            case 'delete-hero':
                 return {
                     title: 'Delete Banner?',
                     message: 'Are you sure you want to remove this banner? This action cannot be undone.',
@@ -244,6 +268,26 @@ const ContentManagerPage = () => {
                     bgColor: 'bg-red-50',
                     btnColor: 'bg-red-500 hover:bg-red-600',
                     actionLabel: 'Delete Banner'
+                };
+            case 'add-card':
+                return {
+                    title: 'Add Category Card?',
+                    message: 'Add a new category card to the grid layout.',
+                    icon: <FiPlus size={32} />,
+                    color: 'text-blue-500',
+                    bgColor: 'bg-blue-50',
+                    btnColor: 'bg-blue-500 hover:bg-blue-600',
+                    actionLabel: 'Add Card'
+                };
+            case 'delete-card':
+                return {
+                    title: 'Delete Card?',
+                    message: 'Are you sure you want to remove this category card?',
+                    icon: <FiTrash2 size={32} />,
+                    color: 'text-red-500',
+                    bgColor: 'bg-red-50',
+                    btnColor: 'bg-red-500 hover:bg-red-600',
+                    actionLabel: 'Delete Card'
                 };
             default:
                 return {};
@@ -486,7 +530,7 @@ const ContentManagerPage = () => {
                                 <div className="flex justify-between items-center mb-6 border-b border-slate-50 pb-4">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-3 h-3 rounded-full ${card.isEnabled !== false ? 'bg-green-500' : 'bg-slate-300'} ring-2 ring-white shadow-sm`}></div>
-                                        <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">{card.id} Card</h3>
+                                        <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">{card.id}</h3>
                                     </div>
 
                                     <div className="flex items-center gap-3">
@@ -500,6 +544,14 @@ const ContentManagerPage = () => {
                                             />
                                             <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                                         </label>
+                                        <div className="h-4 w-px bg-slate-200 mx-1"></div>
+                                        <button
+                                            onClick={() => requestRemoveCard(index)}
+                                            className="text-slate-300 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-xl"
+                                            title="Remove Card"
+                                        >
+                                            <FiTrash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 </div>
 
@@ -580,6 +632,16 @@ const ContentManagerPage = () => {
                             </div>
                         </div>
                     ))}
+
+                    <button
+                        onClick={requestAddCard}
+                        className="w-full py-4 border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400 font-bold flex items-center justify-center gap-2 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all group active:scale-[0.99]"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                            <FiPlus className="group-hover:text-blue-500" />
+                        </div>
+                        Add New Category Card
+                    </button>
                 </div>
             </div>
 

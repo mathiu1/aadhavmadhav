@@ -49,7 +49,7 @@ const ProductListPage = () => {
             const contentDisposition = response.headers['content-disposition'];
             let fileName = `products_report_${new Date().toISOString().split('T')[0]}.xls`;
             if (contentDisposition) {
-                const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
                 if (fileNameMatch && fileNameMatch.length === 2)
                     fileName = fileNameMatch[1];
             }

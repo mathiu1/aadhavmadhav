@@ -52,7 +52,11 @@ const sendMessage = asyncHandler(async (req, res) => {
             pendingOfflineMessages.delete(userIdStr);
         }
 
-        const anyAdminOnline = await User.findOne({ isAdmin: true, isOnline: true });
+        const anyAdminOnline = await User.findOne({
+            isAdmin: true,
+            isOnline: true,
+            name: { $not: /admin\s*bot/i } // Exclude bot from "real admin" check
+        });
 
         if (!anyAdminOnline) {
             // Wait 30 seconds
@@ -61,7 +65,11 @@ const sendMessage = asyncHandler(async (req, res) => {
                 pendingOfflineMessages.delete(userIdStr);
 
                 // FINAL CHECK: Is admin online now?
-                const adminNow = await User.findOne({ isAdmin: true, isOnline: true });
+                const adminNow = await User.findOne({
+                    isAdmin: true,
+                    isOnline: true,
+                    name: { $not: /admin\s*bot/i }
+                });
                 if (!adminNow) {
                     const msg = "Currently admins are offline 🌙\n\nYou can continue shopping 🛍️\n\nAdmins will see your message and reply soon! ⏳";
                     try {
@@ -70,7 +78,7 @@ const sendMessage = asyncHandler(async (req, res) => {
                         console.error("Bot particular message error:", err);
                     }
                 }
-            }, 30000);
+            }, 15000);
 
             pendingOfflineMessages.set(userIdStr, timerId);
         }

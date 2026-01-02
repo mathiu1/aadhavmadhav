@@ -6,7 +6,7 @@
     "dev": "nodemon server.js",
     "production": "node server.js",
     "start": "NODE_ENV=production node server.js",
-    "build:frontend": "cd .. &&cd client&&npm install&&npm run build",
+    "build:frontend": "cd client&&npm install&&npm run build",
     "build": "npm run build:frontend"
   },
   "keywords": [],
@@ -14,7 +14,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

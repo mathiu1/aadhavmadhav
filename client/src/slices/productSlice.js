@@ -14,6 +14,10 @@ const initialState = {
     isLoading: false,
     error: null,
     // Admin ops
+    adminReviews: [],
+    adminReviewPage: 1,
+    adminReviewPages: 1,
+    adminReviewTotal: 0,
     key: 0, // Force refresh
     deleteLoading: false,
     deleteSuccess: false,
@@ -29,6 +33,41 @@ const initialState = {
     reviewSuccess: false,
     reviewError: null,
 };
+
+// ... existing thunks ...
+
+// Admin: Fetch All Reviews
+export const fetchAllReviewsAdmin = createAsyncThunk(
+    'products/fetchAllReviewsAdmin',
+    async ({ search = '', user = '', pageNumber = 1, pageSize = 10 } = {}, thunkAPI) => {
+        try {
+            let query = `?pageNumber=${pageNumber}&pageSize=${pageSize}&`;
+            if (search) query += `search=${search}&`;
+            if (user) query += `user=${user}`;
+
+            const { data } = await api.get(`/products/reviews/all${query}`, { withCredentials: true });
+            return data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// Admin: Delete Review
+export const deleteReviewAdmin = createAsyncThunk(
+    'products/deleteReviewAdmin',
+    async ({ productId, reviewId }, thunkAPI) => {
+        try {
+            await api.delete(`/products/${productId}/reviews/${reviewId}`, { withCredentials: true });
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// ... createReview thunk ...
 
 // Fetch all products with filter params
 export const fetchProducts = createAsyncThunk(
@@ -269,6 +308,33 @@ const productSlice = createSlice({
             .addCase(createReview.rejected, (state, action) => {
                 state.reviewLoading = false;
                 state.reviewError = action.payload;
+            })
+            // Admin: Fetch All Reviews
+            .addCase(fetchAllReviewsAdmin.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(fetchAllReviewsAdmin.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.adminReviews = action.payload.reviews;
+                state.adminReviewPage = action.payload.page;
+                state.adminReviewPages = action.payload.pages;
+                state.adminReviewTotal = action.payload.total;
+            })
+            .addCase(fetchAllReviewsAdmin.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload;
+            })
+            // Admin: Delete Review
+            .addCase(deleteReviewAdmin.pending, (state) => {
+                state.deleteLoading = true;
+            })
+            .addCase(deleteReviewAdmin.fulfilled, (state) => {
+                state.deleteLoading = false;
+                state.deleteSuccess = true;
+            })
+            .addCase(deleteReviewAdmin.rejected, (state, action) => {
+                state.deleteLoading = false;
+                state.deleteError = action.payload;
             });
     },
 });

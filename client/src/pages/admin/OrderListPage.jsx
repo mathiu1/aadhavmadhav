@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { listOrders, listOrdersByUser } from '../../slices/orderSlice';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { FiCheck, FiX, FiInfo, FiShoppingBag, FiCalendar, FiUser, FiDollarSign, FiFilter, FiChevronLeft, FiChevronRight, FiTruck, FiPackage, FiAlertTriangle, FiSearch } from 'react-icons/fi';
+import { FiCheck, FiX, FiInfo, FiShoppingBag, FiCalendar, FiUser, FiDollarSign, FiFilter, FiTruck, FiPackage, FiAlertTriangle, FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import AdminPagination from '../../components/AdminPagination';
 
 const OrderListPage = () => {
     const dispatch = useDispatch();
@@ -100,39 +101,15 @@ const OrderListPage = () => {
     // Pagination State & Logic
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
-    const [pageInput, setPageInput] = useState('1');
 
     const totalPages = filteredOrders ? Math.ceil(filteredOrders.length / itemsPerPage) : 0;
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentOrders = filteredOrders ? filteredOrders.slice(indexOfFirstItem, indexOfLastItem) : [];
 
-    const handlePageChange = (pageNumber) => {
-        if (pageNumber >= 1 && pageNumber <= totalPages) {
-            setCurrentPage(pageNumber);
-            setPageInput(String(pageNumber));
-        }
-    };
-
-    const handleLimitChange = (e) => {
-        setItemsPerPage(Number(e.target.value));
-        setCurrentPage(1);
-        setPageInput('1');
-    };
-
-    const handlePageInput = (val) => {
-        const pageNumber = Number(val);
-        if (pageNumber >= 1 && pageNumber <= totalPages) {
-            setCurrentPage(pageNumber);
-        } else {
-            setPageInput(String(currentPage)); // Reset to current if invalid
-        }
-    };
-
     // Reset page on filter change
     useEffect(() => {
         setCurrentPage(1);
-        setPageInput('1');
     }, [filterStatus, timeFilter, customStartDate, customEndDate, searchQuery]);
 
     useEffect(() => {
@@ -468,87 +445,14 @@ const OrderListPage = () => {
 
                     {/* Pagination Controls */}
                     {filteredOrders && filteredOrders.length > 0 && (
-                        <div className="p-4 md:p-6 bg-white border-t border-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-
-                            {/* Mobile Top Row: Rows per page & Page Count */}
-                            <div className="w-full md:w-auto flex items-center justify-between md:justify-start gap-4">
-                                <div className="flex items-center gap-2 text-xs md:text-sm font-bold text-slate-500">
-                                    <span className="hidden md:inline">Rows per page:</span>
-                                    <span className="md:hidden">Rows:</span>
-                                    <select
-                                        value={itemsPerPage}
-                                        onChange={handleLimitChange}
-                                        className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:border-primary font-bold text-xs md:text-sm"
-                                    >
-                                        <option value={25}>25</option>
-                                        <option value={50}>50</option>
-                                        <option value={75}>75</option>
-                                        <option value={100}>100</option>
-                                    </select>
-                                </div>
-
-                                {/* Mobile Page Info */}
-                                <span className="md:hidden text-xs font-bold text-slate-500 whitespace-nowrap">
-                                    Page {currentPage} / {totalPages}
-                                </span>
-                            </div>
-
-                            {/* Desktop Page Info */}
-                            <span className="hidden md:inline text-sm font-bold text-slate-500 whitespace-nowrap md:absolute md:left-1/2 md:-translate-x-1/2">
-                                Page {currentPage} of {totalPages}
-                            </span>
-
-                            {/* Navigation & Go To */}
-                            <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3 z-10">
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => handlePageChange(currentPage - 1)}
-                                        disabled={currentPage === 1}
-                                        className={`p-1.5 md:p-2 rounded-lg transition-colors border ${currentPage === 1
-                                            ? 'bg-slate-50 text-slate-300 border-transparent cursor-not-allowed'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
-                                    >
-                                        <FiChevronLeft size={16} />
-                                    </button>
-                                </div>
-
-                                <form
-                                    onSubmit={(e) => {
-                                        e.preventDefault();
-                                        handlePageInput(pageInput);
-                                    }}
-                                    className="flex items-center gap-2"
-                                >
-                                    <span className="text-xs font-bold text-slate-400 whitespace-nowrap">Go to</span>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max={totalPages}
-                                        value={pageInput}
-                                        onChange={(e) => setPageInput(e.target.value)}
-                                        className="w-12 md:w-14 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-center text-xs md:text-sm font-bold text-slate-700 focus:outline-none focus:border-primary"
-                                    />
-                                    <button
-                                        type="submit"
-                                        className="bg-slate-900 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors"
-                                    >
-                                        Go
-                                    </button>
-                                </form>
-
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => handlePageChange(currentPage + 1)}
-                                        disabled={currentPage === totalPages}
-                                        className={`p-1.5 md:p-2 rounded-lg transition-colors border ${currentPage === totalPages
-                                            ? 'bg-slate-50 text-slate-300 border-transparent cursor-not-allowed'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
-                                    >
-                                        <FiChevronRight size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        <AdminPagination
+                            page={currentPage}
+                            pages={totalPages}
+                            pageSize={itemsPerPage}
+                            setPage={setCurrentPage}
+                            setPageSize={setItemsPerPage}
+                            pageSizeOptions={[25, 50, 75, 100]}
+                        />
                     )}
 
                     {filteredOrders && filteredOrders.length === 0 && (

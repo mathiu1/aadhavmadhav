@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, deleteProduct, createProduct, resetAdminState, restoreProduct } from '../../slices/productSlice';
-import { FiEdit, FiTrash2, FiPlus, FiBox, FiTag, FiShoppingBag, FiLayers, FiFilter, FiCheck, FiX, FiSearch, FiChevronLeft, FiChevronRight, FiAlertTriangle, FiRotateCcw, FiAlertOctagon } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiPlus, FiBox, FiTag, FiShoppingBag, FiLayers, FiFilter, FiCheck, FiX, FiSearch, FiAlertTriangle, FiRotateCcw, FiAlertOctagon, FiDownload } from 'react-icons/fi';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getImageUrl } from '../../utils/imageUrl';
+import api from '../../api/axios';
+import { toast } from 'react-hot-toast';
+import AdminPagination from '../../components/AdminPagination';
 
 const ProductListPage = () => {
     const dispatch = useDispatch();
@@ -18,9 +21,9 @@ const ProductListPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [pageInput, setPageInput] = useState('1');
     const [actionModal, setActionModal] = useState({ isOpen: false, id: null, type: 'soft' }); // type: 'soft' | 'hard'
     const [undoState, setUndoState] = useState(null);
+    const [exporting, setExporting] = useState(false);
 
     const { products, isLoading, error, pages, page, deleteLoading, deleteSuccess, deleteError, createLoading, createSuccess, createProduct: createdProduct, createError } = useSelector((state) => state.product);
     const { userInfo } = useSelector((state) => state.auth);
@@ -28,6 +31,41 @@ const ProductListPage = () => {
     useEffect(() => {
         dispatch(resetAdminState());
     }, [dispatch]);
+
+    const handleExport = async () => {
+        try {
+            setExporting(true);
+            const response = await api.get('/products/export', {
+                responseType: 'blob',
+                withCredentials: true,
+            });
+
+            // Create blob link to download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+
+            // Extract filename
+            const contentDisposition = response.headers['content-disposition'];
+            let fileName = `products_report_${new Date().toISOString().split('T')[0]}.xls`;
+            if (contentDisposition) {
+                const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                if (fileNameMatch && fileNameMatch.length === 2)
+                    fileName = fileNameMatch[1];
+            }
+
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            setExporting(false);
+            toast.success('Product inventory exported successfully');
+        } catch (err) {
+            setExporting(false);
+            console.error(err);
+            toast.error('Failed to export products');
+        }
+    };
 
     useEffect(() => {
         let interval;
@@ -49,7 +87,6 @@ const ProductListPage = () => {
     // Reset page on filter/search change
     useEffect(() => {
         setCurrentPage(1);
-        setPageInput('1');
     }, [filterStatus, searchQuery, filterCategory]);
 
     useEffect(() => {
@@ -126,15 +163,6 @@ const ProductListPage = () => {
         currentPage * itemsPerPage
     );
 
-    const handlePageInput = (val) => {
-        const pageNumber = Number(val);
-        if (pageNumber >= 1 && pageNumber <= totalPages) {
-            setCurrentPage(pageNumber);
-        } else {
-            setPageInput(String(currentPage));
-        }
-    };
-
     const filters = [
         { label: 'All Products', value: 'all' },
         { label: 'In Stock', value: 'instock' },
@@ -153,12 +181,22 @@ const ProductListPage = () => {
                         </h1>
                         <p className="text-slate-500 font-medium text-sm">Manage your catalog, stock, and pricing.</p>
                     </div>
-                    <button
-                        onClick={() => navigate('/admin/product/add')}
-                        className="bg-primary text-white px-5 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/30 hover:-translate-y-1 active:scale-95 text-sm w-full md:w-auto"
-                    >
-                        <FiPlus size={18} strokeWidth={3} /> Add Product
-                    </button>
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <button
+                            onClick={handleExport}
+                            disabled={exporting}
+                            className="bg-indigo-50 text-indigo-600 px-3 md:px-5 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-100 transition-all border border-indigo-200 text-sm flex-1 md:flex-none disabled:opacity-70 disabled:cursor-wait whitespace-nowrap"
+                        >
+                            {exporting ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-600 border-t-transparent"></div> : <FiDownload size={18} />}
+                            <span>{exporting ? 'Exporting...' : 'Export XLS'}</span>
+                        </button>
+                        <button
+                            onClick={() => navigate('/admin/product/add')}
+                            className="bg-primary text-white px-3 md:px-5 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/30 hover:-translate-y-1 active:scale-95 text-sm flex-1 md:flex-none whitespace-nowrap"
+                        >
+                            <FiPlus size={18} strokeWidth={3} /> Add Product
+                        </button>
+                    </div>
                 </div>
 
                 {/* Filters & Search Toolbar */}
@@ -191,7 +229,7 @@ const ProductListPage = () => {
                                     <option key={c} value={c}>{c}</option>
                                 ))}
                             </select>
-                            <FiChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 rotate-90 pointer-events-none" />
+                            {/* FiChevronRight removed as simplified */}
                         </div>
 
                         {/* Status Pills */}
@@ -409,99 +447,13 @@ const ProductListPage = () => {
 
                     {/* Pagination */}
                     {!isLoading && !error && filteredProducts?.length > 0 && (
-                        <div className="p-4 md:p-6 bg-white border-t border-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-
-                            {/* Mobile Top Row: Rows per page & Page Count */}
-                            <div className="w-full md:w-auto flex items-center justify-between md:justify-start gap-4">
-                                <div className="flex items-center gap-2 text-xs md:text-sm font-bold text-slate-500">
-                                    <span className="hidden md:inline">Rows per page:</span>
-                                    <span className="md:hidden">Rows:</span>
-                                    <select
-                                        value={itemsPerPage}
-                                        onChange={(e) => {
-                                            setItemsPerPage(Number(e.target.value));
-                                            setCurrentPage(1);
-                                            setPageInput('1');
-                                        }}
-                                        className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:border-primary font-bold text-xs md:text-sm"
-                                    >
-                                        <option value={5}>5</option>
-                                        <option value={10}>10</option>
-                                        <option value={20}>20</option>
-                                        <option value={50}>50</option>
-                                    </select>
-                                </div>
-
-                                {/* Mobile Page Info */}
-                                <span className="md:hidden text-xs font-bold text-slate-500 whitespace-nowrap">
-                                    Page {currentPage} / {totalPages}
-                                </span>
-                            </div>
-
-                            {/* Desktop Page Info */}
-                            <span className="hidden md:inline text-sm font-bold text-slate-500 whitespace-nowrap md:absolute md:left-1/2 md:-translate-x-1/2">
-                                Page {currentPage} of {totalPages}
-                            </span>
-
-                            {/* Navigation & Go To */}
-                            <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3 z-10">
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => {
-                                            const newPage = Math.max(currentPage - 1, 1);
-                                            setCurrentPage(newPage);
-                                            setPageInput(String(newPage));
-                                        }}
-                                        disabled={currentPage === 1}
-                                        className={`p-1.5 md:p-2 rounded-lg transition-colors border ${currentPage === 1
-                                            ? 'bg-slate-50 text-slate-300 border-transparent cursor-not-allowed'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
-                                    >
-                                        <FiChevronLeft size={16} />
-                                    </button>
-                                </div>
-
-                                <form
-                                    onSubmit={(e) => {
-                                        e.preventDefault();
-                                        handlePageInput(pageInput);
-                                    }}
-                                    className="flex items-center gap-2"
-                                >
-                                    <span className="text-xs font-bold text-slate-400 whitespace-nowrap">Go to</span>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max={totalPages}
-                                        value={pageInput}
-                                        onChange={(e) => setPageInput(e.target.value)}
-                                        className="w-12 md:w-14 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-center text-xs md:text-sm font-bold text-slate-700 focus:outline-none focus:border-primary"
-                                    />
-                                    <button
-                                        type="submit"
-                                        className="bg-slate-900 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors"
-                                    >
-                                        Go
-                                    </button>
-                                </form>
-
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => {
-                                            const newPage = Math.min(currentPage + 1, totalPages);
-                                            setCurrentPage(newPage);
-                                            setPageInput(String(newPage));
-                                        }}
-                                        disabled={currentPage === totalPages}
-                                        className={`p-1.5 md:p-2 rounded-lg transition-colors border ${currentPage === totalPages
-                                            ? 'bg-slate-50 text-slate-300 border-transparent cursor-not-allowed'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
-                                    >
-                                        <FiChevronRight size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        <AdminPagination
+                            page={currentPage}
+                            pages={totalPages}
+                            pageSize={itemsPerPage}
+                            setPage={setCurrentPage}
+                            setPageSize={setItemsPerPage}
+                        />
                     )}
                 </div>
             )}

@@ -26,6 +26,9 @@ import ProductAddPage from './pages/admin/ProductAddPage';
 import UserListPage from './pages/admin/UserListPage';
 import UserEditPage from './pages/admin/UserEditPage';
 import DashboardPage from './pages/admin/DashboardPage';
+import ReviewListPage from './pages/admin/ReviewListPage';
+import ErrorLogPage from './pages/admin/ErrorLogPage';
+import ContentManagerPage from './pages/admin/ContentManagerPage';
 import AdminLayout from './components/AdminLayout';
 import NetworkStatus from './components/NetworkStatus';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -123,14 +126,18 @@ function App() {
 
               {/* Admin Layout */}
               <Route element={<AdminRoute />}>
-                <Route element={<AdminLayout />}>
-                  <Route path="/admin/dashboard" element={<DashboardPage />} />
-                  <Route path="/admin/orders" element={<OrderListPage />} />
-                  <Route path="/admin/products" element={<ProductListPage />} />
-                  <Route path="/admin/product/add" element={<ProductAddPage />} />
-                  <Route path="/admin/product/:id/edit" element={<ProductEditPage />} />
-                  <Route path="/admin/users" element={<UserListPage />} />
-                  <Route path="/admin/user/:id/edit" element={<UserEditPage />} />
+                <Route path="admin" element={<AdminLayout />}>
+                  <Route path="dashboard" element={<DashboardPage />} />
+                  <Route path="products" element={<ProductListPage />} />
+                  <Route path="products/:pageNumber" element={<ProductListPage />} />
+                  <Route path="product/add" element={<ProductAddPage />} />
+                  <Route path="product/:id/edit" element={<ProductEditPage />} />
+                  <Route path="orders" element={<OrderListPage />} />
+                  <Route path="users" element={<UserListPage />} />
+                  <Route path="user/:id/edit" element={<UserEditPage />} />
+                  <Route path="reviews" element={<ReviewListPage />} />
+                  <Route path="errors" element={<ErrorLogPage />} />
+                  <Route path="content" element={<ContentManagerPage />} />
                 </Route>
               </Route>
             </Routes>

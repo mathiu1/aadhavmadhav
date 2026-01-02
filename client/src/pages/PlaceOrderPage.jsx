@@ -6,19 +6,31 @@ import toast from 'react-hot-toast';
 import CheckoutSteps from '../components/CheckoutSteps';
 import { createOrder, resetOrder } from '../slices/orderSlice';
 import { clearCartLocal } from '../slices/cartSlice';
+import { getSiteConfig } from '../slices/contentSlice';
 import { formatCurrency } from '../utils/formatCurrency';
 
 const PlaceOrderPage = () => {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const cart = useSelector((state) => state.cart);
+    const { config } = useSelector((state) => state.content);
+
+    useEffect(() => {
+        if (!config) dispatch(getSiteConfig());
+    }, [dispatch, config]);
 
     // Filter out OOS items and invalid items for the order
     const validItems = cart.cartItems.filter(item => !item.isOutOfStock && !item.stockProblem);
 
-    // Calculate Prices based on validItems (not cart.cartItems)
-    const itemsPrice = validItems.reduce((acc, item) => acc + item.price * item.qty, 0).toFixed(2);
-    const shippingPrice = (itemsPrice > 100 ? 0 : 10).toFixed(2);
-    const taxPrice = Number((0.15 * itemsPrice).toFixed(2)).toFixed(2);
+    // Calculate Prices
+    const taxRate = config?.taxRate || 0.18;
+    const freeDeliveryLimit = config?.freeDeliveryThreshold || 500;
+    const standardShipping = config?.shippingPrice !== undefined ? config.shippingPrice : 40;
+
+    const itemsPriceVal = validItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+    const itemsPrice = itemsPriceVal.toFixed(2);
+    const shippingPrice = (itemsPriceVal > freeDeliveryLimit ? 0 : standardShipping).toFixed(2);
+    const taxPrice = Number((taxRate * itemsPriceVal).toFixed(2)).toFixed(2);
     const totalPrice = (Number(itemsPrice) + Number(shippingPrice) + Number(taxPrice)).toFixed(2);
 
     useEffect(() => {
@@ -28,8 +40,6 @@ const PlaceOrderPage = () => {
             navigate('/payment');
         }
     }, [cart.paymentMethod, cart.shippingAddress.address, navigate]);
-
-    const dispatch = useDispatch();
     const { order, success, error } = useSelector((state) => state.order);
 
     useEffect(() => {
@@ -141,7 +151,7 @@ const PlaceOrderPage = () => {
                                 <span>{formatCurrency(Number(shippingPrice))}</span>
                             </div>
                             <div className="flex justify-between text-slate-600">
-                                <span>Tax</span>
+                                <span>Tax ({Math.round(taxRate * 100)}%)</span>
                                 <span>{formatCurrency(Number(taxPrice))}</span>
                             </div>
                             <div className="h-px bg-slate-100 my-2"></div>

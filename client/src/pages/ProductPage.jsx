@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { addToCart } from '../slices/cartSlice';
 import { toggleFavorite } from '../slices/authSlice';
+import { getSiteConfig } from '../slices/contentSlice';
 import { formatCurrency } from '../utils/formatCurrency';
 import { getImageUrl } from '../utils/imageUrl';
 import api from '../api/axios';
@@ -70,7 +71,14 @@ const ProductPage = () => {
     const [selectedImage, setSelectedImage] = useState('');
 
     const { userInfo } = useSelector((state) => state.auth);
+    const { config } = useSelector((state) => state.content);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!config) {
+            dispatch(getSiteConfig());
+        }
+    }, [dispatch, config]);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -313,7 +321,7 @@ const ProductPage = () => {
                             <div className="p-2 bg-white rounded-lg shadow-sm">🚚</div>
                             <div>
                                 <p className="font-bold text-slate-900 text-sm">Free Delivery</p>
-                                <p className="text-xs text-slate-500">Orders over {formatCurrency(500)}</p>
+                                <p className="text-xs text-slate-500">Orders over {formatCurrency(config?.freeDeliveryThreshold || 500)}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">

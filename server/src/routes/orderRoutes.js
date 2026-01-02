@@ -11,6 +11,7 @@ const {
     getOrders,
     getOrderSummary,
     getOrdersByUser,
+    exportReport,
 } = require('../controllers/orderController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -19,6 +20,7 @@ router.route('/')
     .get(protect, admin, getOrders);
 
 router.route('/summary').get(protect, admin, getOrderSummary);
+router.route('/export').get(protect, admin, exportReport);
 router.route('/myorders').get(protect, getMyOrders);
 router.route('/user/:id').get(protect, admin, getOrdersByUser);
 router.route('/:id').get(protect, getOrderById);

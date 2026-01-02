@@ -498,6 +498,297 @@ const getOrdersByUser = asyncHandler(async (req, res) => {
     res.json(orders);
 });
 
+// @desc    Export orders report as CSV
+// @route   GET /api/orders/export
+// @access  Private/Admin
+const exportReport = asyncHandler(async (req, res) => {
+    const { period, startDate, endDate, status, category, user } = req.query;
+
+    let query = {};
+
+    // 1. Date Filtering
+    if (period) {
+        if (period !== 'all') { // Only filter if NOT 'all'
+            const now = new Date();
+            let start = new Date();
+            if (period === 'week') {
+                start.setDate(now.getDate() - 7);
+            } else if (period === 'month') {
+                start.setMonth(now.getMonth() - 1);
+            } else if (period === 'year') {
+                start.setFullYear(now.getFullYear() - 1);
+            }
+            query.createdAt = { $gte: start, $lte: now };
+        }
+    } else if (startDate && endDate) {
+        // Adjust endDate to include the full day
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt = {
+            $gte: new Date(startDate),
+            $lte: end
+        };
+    }
+
+    // 2. Status Filtering
+    if (status && status !== 'All') {
+        query.status = status;
+    }
+
+    // 3. Category Filtering
+    if (category && category !== 'All') {
+        // Find products in this category
+        const products = await Product.find({ category: category }).select('_id');
+        const productIds = products.map(p => p._id);
+
+        // Filter orders that contain these products
+        query['orderItems.product'] = { $in: productIds };
+    }
+
+    // 4. User Filtering (Name or Email)
+    if (user) {
+        // Find users matching name or email (case-insensitive regex)
+        const userRegex = new RegExp(user, 'i');
+        const users = await User.find({
+            $or: [{ name: userRegex }, { email: userRegex }]
+        }).select('_id');
+
+        const userIds = users.map(u => u._id);
+        query.user = { $in: userIds };
+    }
+
+    const orders = await Order.find(query)
+        .populate('user', 'name email')
+        .sort({ createdAt: -1 });
+
+    let html = `
+        <html>
+        <head>
+            <style>
+                body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; }
+                table { border-collapse: collapse; width: 100%; border: 1px solid #000; }
+                
+                /* Title Header */
+                .company-header {
+                    background-color: #0f172a; 
+                    color: #fbbf24; /* Amber text */
+                    font-size: 24pt; 
+                    font-weight: bold; 
+                    text-align: center; 
+                    padding: 20px;
+                    border: 1px solid #000;
+                }
+                .report-date {
+                    background-color: #1e293b;
+                    color: #ffffff;
+                    text-align: right;
+                    font-size: 10pt;
+                    padding: 5px;
+                    font-style: italic;
+                }
+
+                th { 
+                    padding: 12px; 
+                    text-align: center; 
+                    font-weight: bold;
+                    white-space: nowrap;
+                    color: #ffffff;
+                    border: 1px solid #000;
+                }
+                
+                td { 
+                    border: 1px solid #000; 
+                    padding: 8px; 
+                    vertical-align: middle; 
+                    color: #000;
+                }
+
+                .text-center { text-align: center; }
+                .text-left { text-align: left; }
+                .text-right { text-align: right; }
+                .font-bold { font-weight: bold; }
+                
+                /* Status Colors */
+                .status-paid { color: #166534; background-color: #dcfce7; font-weight: bold; }
+                .status-unpaid { color: #991b1b; background-color: #fee2e2; font-weight: bold; }
+                .status-delivered { color: #15803d; background-color: #dcfce7; font-weight: bold; }
+                .status-pending { color: #854d0e; background-color: #fef9c3; font-weight: bold; }
+                .status-cancelled { color: #b91c1c; background-color: #fee2e2; font-weight: bold; }
+                
+                .amount { font-family: 'Consolas', monospace; }
+            </style>
+        </head>
+        <body>
+            <table>
+                <thead>
+                    <!-- Company & Report Title -->
+                    <tr>
+                        <th colspan="25" class="company-header">
+                            AadhavMadhav - Orders & Sales Report
+                        </th>
+                    </tr>
+                    <tr>
+                        <th colspan="25" class="report-date">
+                            Generated on: ${new Date().toLocaleString()}
+                        </th>
+                    </tr>
+
+                    <tr>
+                        <!-- Order Details: Professional Blue -->
+                        <th style="background-color: #366092;">Order ID</th>
+                        <th style="background-color: #366092;">Order Date</th>
+                        
+                        <!-- Customer: Professional Purple -->
+                        <th style="background-color: #5f497a;">User Name</th>
+                        <th style="background-color: #5f497a;">User Email</th>
+                        
+                        <!-- Shipping: Professional Teal -->
+                        <th style="background-color: #31869b;">Shipping Name</th>
+                        <th style="background-color: #31869b;">Shipping Phone</th>
+                        <th style="background-color: #31869b;">Address</th>
+                        <th style="background-color: #31869b;">City</th>
+                        <th style="background-color: #31869b;">State</th>
+                        <th style="background-color: #31869b;">Postal Code</th>
+                        <th style="background-color: #31869b;">Country</th>
+                        
+                        <!-- Product: Professional Dark Gray -->
+                        <th style="background-color: #4a4a4a;">Product Name</th>
+                        <th style="background-color: #4a4a4a;">Quantity</th>
+                        <th style="background-color: #4a4a4a;">Item Price</th>
+                        
+                        <!-- Financials: Professional Olive Green -->
+                        <th style="background-color: #76933c;">Tax Price</th>
+                        <th style="background-color: #76933c;">Shipping Price</th>
+                        <th style="background-color: #76933c;">Order Total</th>
+                        
+                        <!-- Status: Professional Burnt Orange & Red -->
+                        <th style="background-color: #e26b0a;">Payment Method</th>
+                        <th style="background-color: #e26b0a;">Payment Status</th>
+                        <th style="background-color: #e26b0a;">Paid At</th>
+                        <th style="background-color: #e26b0a;">Delivery Status</th>
+                        <th style="background-color: #e26b0a;">Delivered At</th>
+                        <th style="background-color: #e26b0a;">Order Status</th>
+                        <th style="background-color: #963634;">Cancelled At</th>
+                        <th style="background-color: #963634;">Cancellation Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    if (orders.length === 0) {
+        html += `
+            <tr>
+                <td colspan="25" style="text-align: center; padding: 20px; font-weight: bold; color: #dc2626; background-color: #fef2f2;">
+                    No Orders Found match your criteria.
+                </td>
+            </tr>
+        `;
+    } else {
+        orders.forEach(order => {
+            const orderId = order._id;
+            const date = new Date(order.createdAt).toISOString().split('T')[0];
+            const userName = order.user ? order.user.name : 'Guest/Deleted';
+            const userEmail = order.user ? order.user.email : 'N/A';
+
+            // Shipping Details
+            const shipName = order.shippingAddress?.name || 'N/A';
+            const shipPhone = order.shippingAddress?.phone || 'N/A';
+            const address = order.shippingAddress?.address || 'N/A';
+            const city = order.shippingAddress?.city || 'N/A';
+            const state = order.shippingAddress?.state || 'N/A';
+            const postalCode = order.shippingAddress?.postalCode || 'N/A';
+            const country = order.shippingAddress?.country || 'N/A';
+
+            // Financials
+            // Format as Currency: 1,234.00
+            const formatMoney = (amount) => (amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            const taxPrice = formatMoney(order.taxPrice);
+            const shippingPrice = formatMoney(order.shippingPrice);
+            const totalPrice = formatMoney(order.totalPrice);
+
+            // Statuses
+            const paymentMethod = order.paymentMethod;
+            const isPaid = order.isPaid ? 'Paid' : 'Unpaid';
+            const paidClass = order.isPaid ? 'status-paid' : 'status-unpaid';
+
+            const paidAt = order.isPaid && order.paidAt ? new Date(order.paidAt).toISOString().split('T')[0] : '';
+
+            const isDelivered = order.isDelivered ? 'Delivered' : 'Pending';
+            const deliveredClass = order.isDelivered ? 'status-delivered' : 'status-pending';
+
+            const deliveredAt = order.isDelivered && order.deliveredAt ? new Date(order.deliveredAt).toISOString().split('T')[0] : '';
+
+            const status = order.status;
+            let statusClass = '';
+            if (status === 'Delivered') statusClass = 'status-delivered';
+            else if (status === 'Cancelled') statusClass = 'status-cancelled';
+            else statusClass = 'status-pending';
+
+            const cancelledAt = order.cancelledAt ? new Date(order.cancelledAt).toISOString().split('T')[0] : '';
+            const cancellationReason = order.cancellationReason || '';
+
+            const items = order.orderItems;
+            const rowSpan = items.length;
+
+            items.forEach((item, index) => {
+                html += '<tr>';
+
+                // Common Columns (Render only on first row with rowspan)
+                if (index === 0) {
+                    // Formatting Helpers
+                    const center = 'text-center';
+                    const left = 'text-left';
+
+                    html += `<td rowspan="${rowSpan}" class="${center} font-bold" style="background-color: #f8fafc;">${orderId}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="${center}">${date}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="${left}">${userName}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="${left}">${userEmail}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="${left}">${shipName}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="${center}">${shipPhone}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="${left}">${address}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="${center}">${city}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="${center}">${state}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="${center}">${postalCode}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="${center}">${country}</td>`;
+                }
+
+                // Product Columns (Render every row)
+                html += `<td class="text-left font-bold">${item.name}</td>`;
+                html += `<td class="text-center">${item.qty}</td>`;
+                html += `<td class="text-right amount">${formatMoney(item.price)}</td>`;
+
+                // Common Columns Checksum (Render only on first row with rowspan)
+                if (index === 0) {
+                    html += `<td rowspan="${rowSpan}" class="text-right amount">${taxPrice}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="text-right amount">${shippingPrice}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="text-right amount font-bold" style="background-color: #f1f5f9;">${totalPrice}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="text-center">${paymentMethod}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="text-center ${paidClass}">${isPaid}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="text-center">${paidAt}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="text-center ${deliveredClass}">${isDelivered}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="text-center">${deliveredAt}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="text-center ${statusClass}">${status}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="text-center">${cancelledAt}</td>`;
+                    html += `<td rowspan="${rowSpan}" class="text-left" style="color: #ef4444;">${cancellationReason}</td>`;
+                }
+
+                html += '</tr>';
+            });
+        });
+    }
+
+    html += `
+                </tbody>
+            </table>
+        </body>
+    `;
+
+    res.header('Content-Type', 'application/vnd.ms-excel');
+    res.attachment(`detailed_orders_report_${new Date().toISOString().split('T')[0]}.xls`);
+    res.send(html);
+});
+
 module.exports = {
     addOrderItems,
     getMyOrders,
@@ -509,4 +800,5 @@ module.exports = {
     getOrders,
     getOrderSummary,
     getOrdersByUser,
+    exportReport,
 };

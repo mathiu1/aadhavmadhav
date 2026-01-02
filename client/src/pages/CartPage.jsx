@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiTrash2, FiMinus, FiPlus, FiArrowRight, FiShoppingBag, FiStar } from 'react-icons/fi';
 import { addToCart, removeFromCart } from '../slices/cartSlice';
+import { getSiteConfig } from '../slices/contentSlice'; // Import config action
 import { formatCurrency } from '../utils/formatCurrency';
 import { getImageUrl } from '../utils/imageUrl';
 
@@ -12,6 +13,13 @@ const CartPage = () => {
     const navigate = useNavigate();
     const { cartItems, isLoading } = useSelector((state) => state.cart);
     const { userInfo } = useSelector((state) => state.auth);
+    const { config } = useSelector((state) => state.content); // Get config
+
+    useEffect(() => {
+        if (!config) {
+            dispatch(getSiteConfig());
+        }
+    }, [dispatch, config]);
 
     const updateQuantityHandler = (item, newQty) => {
         if (newQty < 1) return;
@@ -32,9 +40,15 @@ const CartPage = () => {
 
     // Filter out items that are out of stock for the summary calculation
     const validItems = cartItems.filter(item => !item.isOutOfStock);
+
+    // Dynamic Pricing Logic
+    const taxRate = config?.taxRate || 0.18;
+    const freeDeliveryLimit = config?.freeDeliveryThreshold || 500;
+    const standardShippingCost = config?.shippingPrice !== undefined ? config.shippingPrice : 40;
+
     const itemsPrice = validItems.reduce((acc, item) => acc + item.qty * item.price, 0);
-    const shippingPrice = itemsPrice > 100 ? 0 : 10; // Free shipping over $100
-    const taxPrice = Number((0.15 * itemsPrice).toFixed(2)); // Tax
+    const shippingPrice = itemsPrice > freeDeliveryLimit ? 0 : standardShippingCost;
+    const taxPrice = Number((taxRate * itemsPrice).toFixed(2));
     const totalPrice = (Number(itemsPrice) + Number(shippingPrice) + Number(taxPrice)).toFixed(2);
 
     if (cartItems.length === 0) {
@@ -188,7 +202,7 @@ const CartPage = () => {
                                 <span>{shippingPrice === 0 ? <span className="text-green-600 font-medium">Free</span> : formatCurrency(shippingPrice)}</span>
                             </div>
                             <div className="flex justify-between text-slate-600">
-                                <span>Tax (Est.)</span>
+                                <span>Tax (Est. {Math.round(taxRate * 100)}%)</span>
                                 <span>{formatCurrency(taxPrice)}</span>
                             </div>
                             <div className="h-px bg-slate-200 my-2"></div>

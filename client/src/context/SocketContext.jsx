@@ -12,7 +12,8 @@ export const SocketContextProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const [onlineUsers, setOnlineUsers] = useState([]);
     const { userInfo } = useSelector((state) => state.auth);
-
+    //"https://aadhavmadhav.onrender.com"
+    //http://localhost:5000
     useEffect(() => {
         if (userInfo) {
             const socket = io("https://aadhavmadhav.onrender.com", {

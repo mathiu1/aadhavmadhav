@@ -1,6 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../slices/authSlice';
+import { getUnreadCount } from '../slices/errorLogSlice';
+import { useEffect } from 'react';
 import {
     FiGrid,
     FiShoppingBag,
@@ -10,13 +12,20 @@ import {
     FiSettings,
     FiLogOut,
     FiStar,
-    FiX
+    FiX,
+    FiAlertCircle,
+    FiLayout
 } from 'react-icons/fi';
 
 const AdminSidebar = ({ isOpen, toggleSidebar }) => {
     const location = useLocation();
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const { unreadCount } = useSelector((state) => state.errorLogs);
+
+    useEffect(() => {
+        dispatch(getUnreadCount());
+    }, [dispatch]);
 
     const logoutHandler = () => {
         dispatch(logout());
@@ -28,6 +37,9 @@ const AdminSidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/admin/orders', icon: <FiShoppingBag />, label: 'Orders' },
         { path: '/admin/products', icon: <FiBox />, label: 'Products' },
         { path: '/admin/users', icon: <FiUsers />, label: 'Users' },
+        { path: '/admin/reviews', icon: <FiStar />, label: 'Reviews' },
+        { path: '/admin/content', icon: <FiLayout />, label: 'Content' },
+        { path: '/admin/errors', icon: <FiAlertCircle />, label: 'Error Logs' },
     ];
 
     const isActive = (path) => location.pathname === path;
@@ -74,32 +86,25 @@ const AdminSidebar = ({ isOpen, toggleSidebar }) => {
                                 : 'hover:bg-slate-800 hover:text-white'
                                 }`}
                         >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 w-full">
                                 <span className={`text-xl ${isActive(item.path) ? 'text-white' : 'text-slate-500 group-hover:text-primary'}`}>
                                     {item.icon}
                                 </span>
                                 <span className="font-bold text-sm tracking-wide">{item.label}</span>
+                                {item.path === '/admin/errors' && unreadCount > 0 && (
+                                    <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-red-500/50 animate-pulse">
+                                        {unreadCount}
+                                    </span>
+                                )}
                             </div>
-                            {isActive(item.path) && <FiChevronRight className="text-white/50" />}
+                            {isActive(item.path) && !['/admin/errors'].includes(item.path) && <FiChevronRight className="text-white/50" />}
                         </Link>
                     ))}
-
-                    {/* Section Title */}
-                    <div className="pt-6 pb-2 px-4">
-                        <p className="text-[10px] uppercase tracking-widest font-bold text-slate-600">Reports</p>
-                    </div>
-                    <Link to="#" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all text-sm font-bold opacity-50 cursor-not-allowed">
-                        <FiStar className="text-slate-500" />
-                        <span>Reviews</span>
-                    </Link>
                 </nav>
 
                 {/* Bottom Section */}
                 <div className="p-6 border-t border-slate-800">
                     <div className="space-y-4">
-                        <Link to="/profile" className="flex items-center gap-3 text-sm font-bold hover:text-white transition-colors">
-                            <FiSettings /> Settings
-                        </Link>
                         <button
                             onClick={logoutHandler}
                             className="flex items-center gap-3 text-sm font-bold text-red-400 hover:text-red-300 transition-colors w-full text-left"

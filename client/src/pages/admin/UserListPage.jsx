@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { listUsers, deleteUser, incrementMessageCount, decrementMessageCount, resetMessageCount } from '../../slices/userSlice';
-import { FiTrash2, FiEdit, FiCheck, FiX, FiUsers, FiMail, FiShield, FiFilter, FiSearch, FiChevronLeft, FiChevronRight, FiPackage, FiShoppingCart, FiClock, FiMessageSquare, FiHeart } from 'react-icons/fi';
+import { FiTrash2, FiEdit, FiCheck, FiX, FiUsers, FiMail, FiShield, FiFilter, FiSearch, FiPackage, FiShoppingCart, FiClock, FiMessageSquare, FiHeart } from 'react-icons/fi';
 import { useSocketContext } from '../../context/SocketContext';
 import ChatWindow from '../../components/ChatWindow';
 import api from '../../api/axios';
 import { getImageUrl } from '../../utils/imageUrl';
+import AdminPagination from '../../components/AdminPagination';
 
 const UserListPage = () => {
     const dispatch = useDispatch();
@@ -14,7 +15,6 @@ const UserListPage = () => {
     const [keyword, setKeyword] = useState('');
     const [pageNumber, setPageNumber] = useState(1);
     const [pageSize, setPageSize] = useState(12);
-    const [pageInput, setPageInput] = useState('1');
 
     // Delete Modal State
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -70,7 +70,6 @@ const UserListPage = () => {
         const delayDebounceFn = setTimeout(() => {
             setKeyword(searchTerm);
             setPageNumber(1); // Reset to page 1 on new search
-            setPageInput('1');
         }, 500);
 
         return () => clearTimeout(delayDebounceFn);
@@ -146,15 +145,6 @@ const UserListPage = () => {
     const closeChatHandler = () => {
         setActiveChatUser(null);
         dispatch(listUsers({ keyword, pageNumber, pageSize }));
-    };
-
-    const handlePageInput = (val) => {
-        const pageNum = Number(val);
-        if (pageNum >= 1 && pageNum <= pages) {
-            setPageNumber(pageNum);
-        } else {
-            setPageInput(String(pageNumber));
-        }
     };
 
     return (
@@ -387,99 +377,14 @@ const UserListPage = () => {
 
                     {/* Pagination */}
                     {!loading && !error && users.length > 0 && (
-                        <div className="p-4 md:p-6 bg-white border-t border-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-
-                            {/* Mobile Top Row: Rows per page & Page Count */}
-                            <div className="w-full md:w-auto flex items-center justify-between md:justify-start gap-4">
-                                <div className="flex items-center gap-2 text-xs md:text-sm font-bold text-slate-500">
-                                    <span className="hidden md:inline">Rows per page:</span>
-                                    <span className="md:hidden">Rows:</span>
-                                    <select
-                                        value={pageSize}
-                                        onChange={(e) => {
-                                            setPageSize(Number(e.target.value));
-                                            setPageNumber(1);
-                                            setPageInput('1');
-                                        }}
-                                        className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-700 focus:outline-none focus:border-primary font-bold text-xs md:text-sm"
-                                    >
-                                        <option value={12}>12</option>
-                                        <option value={24}>24</option>
-                                        <option value={50}>50</option>
-                                        <option value={100}>100</option>
-                                    </select>
-                                </div>
-
-                                {/* Mobile Page Info */}
-                                <span className="md:hidden text-xs font-bold text-slate-500 whitespace-nowrap">
-                                    Page {page} / {pages}
-                                </span>
-                            </div>
-
-                            {/* Desktop Page Info */}
-                            <span className="hidden md:inline text-sm font-bold text-slate-500 whitespace-nowrap md:absolute md:left-1/2 md:-translate-x-1/2">
-                                Page {page} of {pages}
-                            </span>
-
-                            {/* Navigation & Go To */}
-                            <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3 z-10">
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => {
-                                            const newPage = Math.max(pageNumber - 1, 1);
-                                            setPageNumber(newPage);
-                                            setPageInput(String(newPage));
-                                        }}
-                                        disabled={pageNumber === 1}
-                                        className={`p-1.5 md:p-2 rounded-lg transition-colors border ${pageNumber === 1
-                                            ? 'bg-slate-50 text-slate-300 border-transparent cursor-not-allowed'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
-                                    >
-                                        <FiChevronLeft size={16} />
-                                    </button>
-                                </div>
-
-                                <form
-                                    onSubmit={(e) => {
-                                        e.preventDefault();
-                                        handlePageInput(pageInput);
-                                    }}
-                                    className="flex items-center gap-2"
-                                >
-                                    <span className="text-xs font-bold text-slate-400 whitespace-nowrap">Go to</span>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max={pages}
-                                        value={pageInput}
-                                        onChange={(e) => setPageInput(e.target.value)}
-                                        className="w-12 md:w-14 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-center text-xs md:text-sm font-bold text-slate-700 focus:outline-none focus:border-primary"
-                                    />
-                                    <button
-                                        type="submit"
-                                        className="bg-slate-900 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors"
-                                    >
-                                        Go
-                                    </button>
-                                </form>
-
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => {
-                                            const newPage = Math.min(pageNumber + 1, pages);
-                                            setPageNumber(newPage);
-                                            setPageInput(String(newPage));
-                                        }}
-                                        disabled={pageNumber === pages}
-                                        className={`p-1.5 md:p-2 rounded-lg transition-colors border ${pageNumber === pages
-                                            ? 'bg-slate-50 text-slate-300 border-transparent cursor-not-allowed'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}`}
-                                    >
-                                        <FiChevronRight size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        <AdminPagination
+                            page={pageNumber}
+                            pages={pages}
+                            pageSize={pageSize}
+                            setPage={setPageNumber}
+                            setPageSize={setPageSize}
+                            pageSizeOptions={[12, 24, 50, 100]}
+                        />
                     )}
                 </div>
             )}

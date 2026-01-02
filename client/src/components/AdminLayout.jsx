@@ -1,10 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import { FiMenu, FiX } from 'react-icons/fi';
+import { useDispatch } from 'react-redux';
+import { incrementUnread } from '../slices/errorLogSlice';
+import { io } from 'socket.io-client';
+import toast from 'react-hot-toast';
 
 const AdminLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const dispatch = useDispatch();
+//https://aadhavmadhav.onrender.com
+//http://localhost:5000
+    useEffect(() => {
+        const socket = io("https://aadhavmadhav.onrender.com");
+
+        socket.on('errorLogCreated', (log) => {
+            dispatch(incrementUnread());
+            toast.error(`New System Error: ${log.message.substring(0, 30)}...`, {
+                icon: '🚨',
+                duration: 4000
+            });
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [dispatch]);
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 

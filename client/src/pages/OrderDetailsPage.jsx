@@ -343,7 +343,7 @@ const OrderDetailsPage = () => {
                                 <span>{formatCurrency(order.shippingPrice)}</span>
                             </div>
                             <div className="flex justify-between text-slate-600">
-                                <span>Tax</span>
+                                <span>Tax ({order.itemsPrice ? Math.round((order.taxPrice / order.itemsPrice) * 100) : 0}%)</span>
                                 <span>{formatCurrency(order.taxPrice)}</span>
                             </div>
                             <div className="h-px bg-slate-100 my-2"></div>

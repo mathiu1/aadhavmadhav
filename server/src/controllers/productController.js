@@ -308,6 +308,262 @@ const createProductReview = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Export products report as Excel
+// @route   GET /api/products/export
+// @access  Private/Admin
+const exportProducts = asyncHandler(async (req, res) => {
+    const products = await Product.find({})
+        .sort({ createdAt: -1 });
+
+    let html = `
+        <html>
+        <head>
+            <style>
+                body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; }
+                table { border-collapse: collapse; width: 100%; border: 1px solid #000; }
+                
+                /* Title Header */
+                .company-header {
+                    background-color: #1e293b; 
+                    color: #fbbf24; 
+                    font-size: 20pt; 
+                    font-weight: bold; 
+                    text-align: center; 
+                    padding: 15px;
+                }
+                .report-date {
+                    background-color: #334155;
+                    color: #ffffff;
+                    text-align: right;
+                    font-size: 9pt;
+                    padding: 5px;
+                    font-style: italic;
+                }
+
+                th { 
+                    padding: 10px; 
+                    text-align: center; 
+                    font-weight: bold;
+                    white-space: nowrap;
+                    color: #ffffff;
+                    border: 1px solid #000;
+                }
+                
+                td { 
+                    border: 1px solid #000; 
+                    padding: 6px; 
+                    vertical-align: middle; 
+                    color: #000;
+                }
+
+                .text-center { text-align: center; }
+                .text-left { text-align: left; }
+                .text-right { text-align: right; }
+                
+                .amount { font-family: 'Consolas', monospace; }
+                
+                .status-active { color: #166534; background-color: #dcfce7; font-weight: bold; }
+                .status-deleted { color: #991b1b; background-color: #fee2e2; font-weight: bold; }
+                .status-low { color: #854d0e; background-color: #fef9c3; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="12" class="company-header">
+                            AadhavMadhav - Product Inventory Report
+                        </th>
+                    </tr>
+                    <tr>
+                        <th colspan="12" class="report-date">
+                            Generated on: ${new Date().toLocaleString()}
+                        </th>
+                    </tr>
+                    <tr>
+                        <!-- Basic Info: Deep Blue -->
+                        <th style="background-color: #1e3a8a;">Product ID</th>
+                        <th style="background-color: #1e3a8a;">Name</th>
+                        <th style="background-color: #1e3a8a;">Category</th>
+                        <th style="background-color: #1e3a8a;">Type</th>
+
+                        <!-- Financials: Emerald -->
+                        <th style="background-color: #064e3b;">Price</th>
+                        <th style="background-color: #064e3b;">Discount</th>
+                        <th style="background-color: #064e3b;">Old Price</th>
+
+                        <!-- Inventory & Stats: Teal -->
+                        <th style="background-color: #0f766e;">Stock</th>
+                        <th style="background-color: #0f766e;">Rating</th>
+                        <th style="background-color: #0f766e;">Reviews</th>
+                        
+                        <!-- Meta: Slate -->
+                        <th style="background-color: #334155;">Status</th>
+                        <th style="background-color: #334155;">Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    products.forEach(product => {
+        const formatMoney = (amount) => (amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const isDeleted = product.isDeleted;
+        const statusClass = isDeleted ? 'status-deleted' : (product.countInStock < 5 ? 'status-low' : 'status-active');
+        const statusText = isDeleted ? 'Deleted' : (product.countInStock === 0 ? 'Out of Stock' : (product.countInStock < 5 ? 'Low Stock' : 'Active'));
+
+        html += `
+            <tr>
+                <td class="text-center" style="background-color: #f8fafc;">${product._id}</td>
+                <td class="text-left font-bold">${product.name}</td>
+                <td class="text-center">${product.category}</td>
+                <td class="text-center">${product.type || '-'}</td>
+                
+                <td class="text-right amount">${formatMoney(product.price)}</td>
+                <td class="text-center amount">${product.discountPercentage > 0 ? product.discountPercentage + '%' : '-'}</td>
+                <td class="text-right amount" style="color: #64748b; text-decoration: ${product.oldPrice > 0 ? 'line-through' : 'none'};">${product.oldPrice > 0 ? formatMoney(product.oldPrice) : '-'}</td>
+                
+                <td class="text-center font-bold ${product.countInStock === 0 ? 'status-deleted' : ''}">${product.countInStock}</td>
+                <td class="text-center">${product.rating} ★</td>
+                <td class="text-center">${product.numReviews}</td>
+                
+                <td class="text-center ${statusClass}">${statusText}</td>
+                <td class="text-center">${new Date(product.createdAt).toLocaleDateString()}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </body>
+        </html>
+    `;
+
+    res.header('Content-Type', 'application/vnd.ms-excel');
+    res.attachment(`products_report_${new Date().toISOString().split('T')[0]}.xls`);
+    res.send(html);
+});
+
+// @desc    Get all reviews (Admin)
+// @route   GET /api/products/reviews/all
+// @access  Private/Admin
+const getAllReviews = asyncHandler(async (req, res) => {
+    const { search, user, pageNumber, pageSize } = req.query;
+
+    const page = Number(pageNumber) || 1;
+    const limit = Number(pageSize) || 10;
+    const skip = (page - 1) * limit;
+
+    const pipeline = [];
+
+    // 1. Match Product Name if provided (Optimization: filter before unwind)
+    if (search) {
+        pipeline.push({ $match: { name: { $regex: search, $options: 'i' } } });
+    }
+
+    // 2. Unwind reviews
+    pipeline.push({ $unwind: '$reviews' });
+
+    // 3. Lookup User Details (Email)
+    pipeline.push({
+        $lookup: {
+            from: 'users',
+            localField: 'reviews.user',
+            foreignField: '_id',
+            as: 'userDetails'
+        }
+    });
+    pipeline.push({ $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } });
+
+    // 4. Project
+    pipeline.push({
+        $project: {
+            _id: 1,
+            productName: '$name',
+            productImage: '$image',
+            reviewId: '$reviews._id',
+            rating: '$reviews.rating',
+            comment: '$reviews.comment',
+            userName: '$reviews.name', // Reviewer name stored in review
+            userEmail: '$userDetails.email',
+            user: '$reviews.user',
+            createdAt: '$reviews.createdAt'
+        }
+    });
+
+    // 5. Match User Name if provided
+    if (user) {
+        pipeline.push({
+            $match: { userName: { $regex: user, $options: 'i' } }
+        });
+    }
+
+    // 6. Sort
+    pipeline.push({ $sort: { createdAt: -1 } });
+
+    // 7. Pagination Facet
+    pipeline.push({
+        $facet: {
+            metadata: [{ $count: "total" }],
+            data: [{ $skip: skip }, { $limit: limit }]
+        }
+    });
+
+    const result = await Product.aggregate(pipeline);
+
+    // Extract data
+    const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
+    const reviews = result[0].data;
+
+    res.json({
+        reviews,
+        page,
+        pages: Math.ceil(total / limit),
+        total
+    });
+});
+
+// @desc    Delete a review (Admin)
+// @route   DELETE /api/products/:id/reviews/:reviewId
+// @access  Private/Admin
+const deleteReview = asyncHandler(async (req, res) => {
+    const product = await Product.findById(req.params.id);
+
+    if (product) {
+        const review = product.reviews.find(
+            (r) => r._id.toString() === req.params.reviewId.toString()
+        );
+
+        if (review) {
+            // Remove review
+            product.reviews = product.reviews.filter(
+                (r) => r._id.toString() !== req.params.reviewId.toString()
+            );
+
+            // Recalculate Rating
+            product.numReviews = product.reviews.length;
+
+            if (product.reviews.length > 0) {
+                product.rating =
+                    product.reviews.reduce((acc, item) => item.rating + acc, 0) /
+                    product.reviews.length;
+            } else {
+                product.rating = 0;
+            }
+
+            await product.save();
+            res.json({ message: 'Review deleted' });
+        } else {
+            res.status(404);
+            throw new Error('Review not found');
+        }
+    } else {
+        res.status(404);
+        throw new Error('Product not found');
+    }
+});
+
 module.exports = {
     getProducts,
     getProductById,
@@ -317,4 +573,7 @@ module.exports = {
     updateProduct,
     createProductReview,
     restoreProduct,
+    exportProducts,
+    getAllReviews,
+    deleteReview
 };

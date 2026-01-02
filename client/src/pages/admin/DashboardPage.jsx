@@ -32,6 +32,8 @@ import {
 } from 'recharts';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getImageUrl } from '../../utils/imageUrl';
+import api from '../../api/axios';
+import { toast } from 'react-hot-toast';
 
 const DashboardPage = () => {
     const dispatch = useDispatch();
@@ -46,6 +48,18 @@ const DashboardPage = () => {
     const [showCustomPicker, setShowCustomPicker] = useState(false);
     const [topLimit, setTopLimit] = useState(5);
     const [validationError, setValidationError] = useState('');
+    const [exporting, setExporting] = useState(false);
+
+    // Export Modal States
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportFilters, setExportFilters] = useState({
+        period: 'week', // week, month, year, custom
+        startDate: '',
+        endDate: '',
+        status: 'All',
+        category: 'All',
+        user: ''
+    });
 
     useEffect(() => {
         if (dateRange !== 'custom') {
@@ -64,6 +78,71 @@ const DashboardPage = () => {
             }
             dispatch(getOrderSummary({ range: 'custom', startDate, endDate }));
             setShowCustomPicker(false);
+        }
+    };
+
+    const toggleExportModal = () => {
+        setShowExportModal(!showExportModal);
+    };
+
+    const handleExportFilterChange = (e) => {
+        const { name, value } = e.target;
+        setExportFilters(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleExport = async (e) => {
+        if (e) e.preventDefault();
+        try {
+            setExporting(true);
+
+            // Build Query Params
+            const params = new URLSearchParams();
+            if (exportFilters.period === 'custom') {
+                if (!exportFilters.startDate || !exportFilters.endDate) {
+                    toast.error('Please select start and end dates');
+                    setExporting(false);
+                    return;
+                }
+                params.append('startDate', exportFilters.startDate);
+                params.append('endDate', exportFilters.endDate);
+            } else {
+                params.append('period', exportFilters.period);
+            }
+
+            if (exportFilters.status !== 'All') params.append('status', exportFilters.status);
+            if (exportFilters.category !== 'All') params.append('category', exportFilters.category);
+            if (exportFilters.user) params.append('user', exportFilters.user);
+
+            const response = await api.get(`/orders/export?${params.toString()}`, {
+                responseType: 'blob',
+                withCredentials: true,
+            });
+
+            // Create blob link to download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+
+            // Extract filename from header if possible, or default
+            const contentDisposition = response.headers['content-disposition'];
+            let fileName = `report_${new Date().toISOString().split('T')[0]}.xls`;
+            if (contentDisposition) {
+                const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                if (fileNameMatch && fileNameMatch.length === 2)
+                    fileName = fileNameMatch[1];
+            }
+
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            setExporting(false);
+            setShowExportModal(false);
+            toast.success('Report downloaded successfully');
+        } catch (err) {
+            setExporting(false);
+            console.error(err);
+            toast.error('Failed to export report');
         }
     };
 
@@ -109,11 +188,146 @@ const DashboardPage = () => {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <button className="flex-1 md:flex-none justify-center bg-slate-900 text-white px-6 py-3 md:py-3.5 rounded-xl md:rounded-2xl font-black flex items-center gap-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 text-sm">
-                            <FiArrowUpRight strokeWidth={3} /> <span className="whitespace-nowrap">Export Report</span>
+                        <button
+                            onClick={toggleExportModal}
+                            disabled={exporting}
+                            className="flex-1 md:flex-none justify-center bg-slate-900 text-white px-6 py-3 md:py-3.5 rounded-xl md:rounded-2xl font-black flex items-center gap-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 text-sm disabled:opacity-70 disabled:cursor-wait"
+                        >
+                            {exporting ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div> : <FiArrowUpRight strokeWidth={3} />}
+                            <span className="whitespace-nowrap">{exporting ? 'Exporting...' : 'Export Report'}</span>
                         </button>
                     </div>
                 </div>
+
+                {/* Export Filter Modal */}
+                {showExportModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                            {/* Modal Header */}
+                            <div className="flex justify-between items-center p-4 md:p-6 border-b border-slate-100">
+                                <h3 className="text-xl font-black text-slate-800">Filter Export Data</h3>
+                                <button onClick={toggleExportModal} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600">
+                                    <FiX size={20} />
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="p-4 md:p-6 space-y-5 max-h-[70vh] overflow-y-auto no-scrollbar">
+                                {/* Date Range */}
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-3">Time Period</label>
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        {['week', 'month', 'year', 'all', 'custom'].map((p) => (
+                                            <button
+                                                key={p}
+                                                type="button"
+                                                onClick={() => setExportFilters(prev => ({ ...prev, period: p }))}
+                                                className={`px-4 py-2 rounded-xl text-sm font-bold capitalize transition-all flex-grow sm:flex-grow-0 ${exportFilters.period === p
+                                                    ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
+                                                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                                                    }`}
+                                            >
+                                                {p === 'all' ? 'All Time' : p}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {exportFilters.period === 'custom' && (
+                                        <div className="flex flex-col md:flex-row gap-3 animate-in slide-in-from-top-2">
+                                            <div className="flex-1">
+                                                <label className="text-xs font-bold text-slate-400 mb-1 block">Start Date</label>
+                                                <input
+                                                    type="date"
+                                                    name="startDate"
+                                                    value={exportFilters.startDate}
+                                                    onChange={handleExportFilterChange}
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="text-xs font-bold text-slate-400 mb-1 block">End Date</label>
+                                                <input
+                                                    type="date"
+                                                    name="endDate"
+                                                    value={exportFilters.endDate}
+                                                    onChange={handleExportFilterChange}
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Order Status */}
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Order Status</label>
+                                    <select
+                                        name="status"
+                                        value={exportFilters.status}
+                                        onChange={handleExportFilterChange}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none"
+                                    >
+                                        <option value="All">All Statuses</option>
+                                        <option value="Processing">Processing</option>
+                                        <option value="Shipped">Shipped</option>
+                                        <option value="Delivered">Delivered</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+
+                                {/* Category */}
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Product Category</label>
+                                    <select
+                                        name="category"
+                                        value={exportFilters.category}
+                                        onChange={handleExportFilterChange}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none"
+                                    >
+                                        <option value="All">All Categories</option>
+                                        <option value="Crackers">Crackers</option>
+                                        <option value="Custom T-Shirts">Custom T-Shirts</option>
+                                        <option value="Nuts">Nuts</option>
+                                        <option value="General">General</option>
+                                    </select>
+                                </div>
+
+                                {/* User Filter */}
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Filter by User</label>
+                                    <div className="relative">
+                                        <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            name="user"
+                                            value={exportFilters.user}
+                                            onChange={handleExportFilterChange}
+                                            placeholder="Search by Name or Email..."
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all decoration-none"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="p-4 md:p-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={toggleExportModal}
+                                    className="flex-1 bg-slate-100 text-slate-600 px-6 py-3.5 rounded-2xl font-bold hover:bg-slate-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleExport}
+                                    disabled={exporting}
+                                    className="flex-1 bg-slate-900 text-white px-6 py-3.5 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-70 disabled:cursor-wait flex justify-center items-center gap-2 whitespace-nowrap"
+                                >
+                                    {exporting ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div> : <FiArrowUpRight strokeWidth={3} />}
+                                    <span>Download Report</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="flex justify-center items-center h-96">

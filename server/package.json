@@ -6,7 +6,7 @@
     "dev": "nodemon server.js",
     "production": "node server.js",
     "start": "NODE_ENV=production node server.js",
-    "build:frontend": "cd client&&npm install&&npm run build",
+    "build:frontend": "cd ..&&cd client&&npm install&&npm run build",
     "build": "npm run build:frontend"
   },
   "keywords": [],

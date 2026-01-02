@@ -153,7 +153,11 @@ const ErrorLogPage = () => {
                                                     )}
                                                 </div>
                                             )}
-                                            {log.ip && <p className="text-[10px] text-slate-300 mt-1" title="IP Address">{log.ip}</p>}
+                                            {log.ip && (
+                                                <p className="text-[10px] text-slate-300 mt-1" title="IP Address">
+                                                    {(log.ip === '::1' || log.ip === '127.0.0.1') ? 'Server / Localhost' : log.ip}
+                                                </p>
+                                            )}
                                         </td>
                                         <td className="p-4 md:p-6 whitespace-nowrap text-xs text-slate-500 font-medium">
                                             {new Date(log.createdAt).toLocaleString()}

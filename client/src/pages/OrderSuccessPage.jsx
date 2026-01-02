@@ -32,7 +32,7 @@ const OrderSuccessPage = () => {
                 <h1 className="text-3xl font-bold text-slate-800 mb-4">Order Placed Successfully!</h1>
                 <p className="text-slate-500 mb-8">
                     Thank you for your purchase. Your order has been confirmed and will be shipped soon.
-                    You will receive an email confirmation shortly.
+
                 </p>
 
                 <div className="space-y-4">

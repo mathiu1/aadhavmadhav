@@ -20,6 +20,38 @@ const defaultSlides = [
     }
 ];
 
+const defaultCards = [
+    {
+        id: 'apparel',
+        title: 'Apparel',
+        subtitle: 'Custom Fit',
+        image: 'https://plus.unsplash.com/premium_photo-1701204056531-f82d31308f1f?q=80&w=687&auto=format&fit=crop',
+        link: '/products',
+        buttonText: 'Explore Collection'
+    },
+    {
+        id: 'crackers',
+        title: 'Crackers',
+        subtitle: 'Light up the night',
+        image: 'https://images.unsplash.com/photo-1563303313-93627cc2a1aa?q=80&w=1170&auto=format&fit=crop',
+        link: '/products'
+    },
+    {
+        id: 'nuts',
+        title: 'Nuts & Dry Fruits',
+        subtitle: 'Healthy Snacking',
+        image: 'https://plus.unsplash.com/premium_photo-1726768984120-f476b15835f2?q=80&w=1169&auto=format&fit=crop',
+        link: '/products'
+    },
+    {
+        id: 'promo',
+        title: 'Wait!',
+        subtitle: 'Get 20% off on first order.',
+        promoCode: 'Use Code: FIRST20',
+        buttonText: 'Grab Code'
+    }
+];
+
 const Slider = ({ products }) => {
     const sliderRef = useRef();
     const [width, setWidth] = useState(0);
@@ -89,7 +121,7 @@ const HomePage = () => {
 
     // Use config slides or fallback
     const activeSlides = config?.heroSlides?.length > 0 ? config.heroSlides : defaultSlides;
-    const cards = config?.categoryCards || [];
+    const cards = config?.categoryCards?.length > 0 ? config.categoryCards : defaultCards;
 
     const [direction, setDirection] = useState(0);
     const [isPaused, setIsPaused] = useState(false);

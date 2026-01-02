@@ -74,10 +74,11 @@ app.use(
 app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
 
 // Routes (Placeholders)
-// Routes (Placeholders)
 app.get("/api/ping", (req, res) => {
   res.send("API is running...");
 });
+
+//require("./ping.js");
 
 app.use("/api/users", require("./src/routes/userRoutes"));
 app.use("/api/products", require("./src/routes/productRoutes"));
@@ -105,23 +106,25 @@ app.use(async (err, req, res, next) => {
   // Log to DB
   let logId = null;
   try {
-    const log = await ErrorLog.create({
-      message: err.message,
-      stack: err.stack,
-      path: req.originalUrl,
-      method: req.method,
-      statusCode: statusCode,
-      user: req.user ? req.user._id : null,
-      source: "server",
-      ip: req.ip,
-      userAgent: req.headers["user-agent"],
-    });
-    logId = log._id;
+    if (!err.message.includes("Not authorized")) {
+      const log = await ErrorLog.create({
+        message: err.message,
+        stack: err.stack,
+        path: req.originalUrl,
+        method: req.method,
+        statusCode: statusCode,
+        user: req.user ? req.user._id : null,
+        source: "server",
+        ip: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+      logId = log._id;
 
-    // Emit socket event
-    const io = req.app.get("io");
-    if (io) {
-      io.emit("errorLogCreated", log);
+      // Emit socket event
+      const io = req.app.get("io");
+      if (io) {
+        io.emit("errorLogCreated", log);
+      }
     }
   } catch (loggingError) {
     console.error("Failed to log error to DB:", loggingError);

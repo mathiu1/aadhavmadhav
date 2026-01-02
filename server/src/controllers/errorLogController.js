@@ -53,9 +53,13 @@ const getErrorLogs = asyncHandler(async (req, res) => {
     const pageSize = 20;
     const page = Number(req.query.pageNumber) || 1;
 
-    const count = await ErrorLog.countDocuments({});
+    const filter = {
+        message: { $ne: 'Not authorized, no token' }
+    };
 
-    const logs = await ErrorLog.find({})
+    const count = await ErrorLog.countDocuments(filter);
+
+    const logs = await ErrorLog.find(filter)
         .populate('user', 'id name email')
         .sort({ createdAt: -1 })
         .limit(pageSize)
@@ -68,7 +72,10 @@ const getErrorLogs = asyncHandler(async (req, res) => {
 // @route   GET /api/errors/unread
 // @access  Private/Admin
 const getUnreadErrorCount = asyncHandler(async (req, res) => {
-    const count = await ErrorLog.countDocuments({ isRead: false });
+    const count = await ErrorLog.countDocuments({
+        isRead: false,
+        message: { $ne: 'Not authorized, no token' }
+    });
     res.json({ count });
 });
 

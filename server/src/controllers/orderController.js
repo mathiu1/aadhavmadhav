@@ -270,9 +270,13 @@ const getOrderSummary = asyncHandler(async (req, res) => {
     const orderQuery = { ...baseDateQuery, isDelivered: true };
     const prevOrderQuery = { ...prevBaseDateQuery, isDelivered: true };
 
+    // Filter for Users: Exclude 'adminBot' (case insensitive)
+    const userQuery = { ...baseDateQuery, name: { $not: /admin\s*bot/i } };
+    const prevUserQuery = { ...prevBaseDateQuery, name: { $not: /admin\s*bot/i } };
+
     // --- Current Period Stats ---
     const ordersCount = await Order.countDocuments(orderQuery);
-    const usersCount = await User.countDocuments(baseDateQuery);
+    const usersCount = await User.countDocuments(userQuery);
     const productsCount = await Product.countDocuments();
     const outOfStockProducts = await Product.countDocuments({ countInStock: 0 });
 
@@ -281,7 +285,7 @@ const getOrderSummary = asyncHandler(async (req, res) => {
 
     // --- Previous Period Stats (for Growth Calc) ---
     const prevOrdersCount = await Order.countDocuments(prevOrderQuery);
-    const prevUsersCount = await User.countDocuments(prevBaseDateQuery);
+    const prevUsersCount = await User.countDocuments(prevUserQuery);
     const prevOrdersAll = await Order.find(prevOrderQuery);
     const prevTotalRevenue = prevOrdersAll.reduce((acc, order) => acc + order.totalPrice, 0);
 
@@ -314,7 +318,7 @@ const getOrderSummary = asyncHandler(async (req, res) => {
     ]);
 
     const userDataRaw = await User.aggregate([
-        { $match: baseDateQuery },
+        { $match: userQuery },
         {
             $group: {
                 _id: { $dateToString: { format: dateFormat, date: "$createdAt" } },

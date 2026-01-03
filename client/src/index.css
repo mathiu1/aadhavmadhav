@@ -59,3 +59,12 @@
     scrollbar-width: none;
   }
 }
+
+@keyframes wave {
+  0%, 100% { height: 40%; }
+  50% { height: 100%; }
+}
+
+.animate-wave {
+  animation: wave 1.2s ease-in-out infinite;
+}

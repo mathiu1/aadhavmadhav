@@ -316,11 +316,32 @@ const getFavorites = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Get a support agent (Admin)
+// @route   GET /api/users/support-agent
+// @access  Private
+const getSupportAgent = asyncHandler(async (req, res) => {
+    // 1. Try to find an ONLINE admin first
+    let admin = await User.findOne({ isAdmin: true, isOnline: true }).select('_id name email isAdmin isOnline');
+
+    // 2. If no online admin, return any admin
+    if (!admin) {
+        admin = await User.findOne({ isAdmin: true }).select('_id name email isAdmin isOnline');
+    }
+
+    if (admin) {
+        res.json(admin);
+    } else {
+        res.status(404);
+        throw new Error('No support agents available');
+    }
+});
+
 module.exports = {
     authUser,
     registerUser,
     getUserProfile,
     logoutUser,
+    getSupportAgent,
     getUsers,
     deleteUser,
     getUserById,

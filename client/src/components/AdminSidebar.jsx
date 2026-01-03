@@ -14,7 +14,8 @@ import {
     FiStar,
     FiX,
     FiAlertCircle,
-    FiLayout
+    FiLayout,
+    FiPhone
 } from 'react-icons/fi';
 
 const AdminSidebar = ({ isOpen, toggleSidebar }) => {
@@ -37,6 +38,7 @@ const AdminSidebar = ({ isOpen, toggleSidebar }) => {
         { path: '/admin/orders', icon: <FiShoppingBag />, label: 'Orders' },
         { path: '/admin/products', icon: <FiBox />, label: 'Products' },
         { path: '/admin/users', icon: <FiUsers />, label: 'Users' },
+        { path: '/admin/calls', icon: <FiPhone />, label: 'Calls Support' },
         { path: '/admin/reviews', icon: <FiStar />, label: 'Reviews' },
         { path: '/admin/content', icon: <FiLayout />, label: 'Content' },
         { path: '/admin/errors', icon: <FiAlertCircle />, label: 'Error Logs' },

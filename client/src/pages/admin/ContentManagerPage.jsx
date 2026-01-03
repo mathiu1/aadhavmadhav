@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getSiteConfig, updateSiteConfig, initConfig } from '../../slices/contentSlice';
-import { FiSave, FiLayout, FiGrid, FiTrash2, FiPlus, FiAlertTriangle, FiCheckCircle, FiInfo, FiRefreshCw, FiImage, FiSettings, FiTruck, FiPercent } from 'react-icons/fi';
+import { FiSave, FiLayout, FiGrid, FiTrash2, FiPlus, FiAlertTriangle, FiCheckCircle, FiInfo, FiRefreshCw, FiImage, FiSettings, FiTruck, FiPercent, FiUpload } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import api from '../../api/axios';
+import { getImageUrl } from '../../utils/imageUrl';
 
 const GRADIENT_POOL = [
     'from-purple-500 to-pink-500',
@@ -145,6 +147,65 @@ const ContentManagerPage = () => {
         const newCards = [...categoryCards];
         newCards[index] = { ...newCards[index], [field]: value };
         setCategoryCards(newCards);
+    };
+
+    const deleteOldImage = async (imagePath) => {
+        // Handle both relative "/uploads/file.jpg" and absolute "http://.../uploads/file.jpg"
+        if (imagePath && imagePath.includes('/uploads/')) {
+            const parts = imagePath.split('/uploads/');
+            const filename = parts[parts.length - 1]; // Get the last part (filename)
+
+            // Sanity check: ensure filename doesn't contain further path separators
+            if (!filename || filename.includes('/') || filename.includes('\\')) return;
+
+            try {
+                console.log("Attempting to delete old image:", filename);
+                await api.delete(`/upload/${filename}`);
+                // Optional: toast.success('Old image cleanup success');
+            } catch (err) {
+                console.error("Failed to delete old image on server", err);
+            }
+        }
+    };
+
+    const uploadFileHandler = async (e, index, type) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('images', file);
+
+        try {
+            // 1. Upload new image
+            const config = {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            };
+            const { data } = await api.post('/upload', formData, config);
+            const newImagePath = data[0];
+
+            // 2. Identify old image path to delete
+            let oldImagePath = '';
+            if (type === 'hero') {
+                oldImagePath = heroSlides[index].image;
+                handleHeroChange(index, 'image', newImagePath);
+                toast.success('Hero image uploaded!');
+            } else if (type === 'card') {
+                oldImagePath = categoryCards[index].image;
+                handleCardChange(index, 'image', newImagePath);
+                toast.success('Category image uploaded!');
+            }
+
+            // 3. Delete old image if it was a local upload
+            if (oldImagePath) {
+                await deleteOldImage(oldImagePath);
+            }
+
+        } catch (error) {
+            console.error(error);
+            toast.error('Image upload failed');
+        }
     };
 
     // Action Requesters (Open Modal)
@@ -432,7 +493,7 @@ const ContentManagerPage = () => {
                                         <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
                                             <label className="text-xs font-bold text-slate-500 mb-2 block uppercase tracking-wider">Preview Image</label>
                                             <div className="aspect-video w-full rounded-xl overflow-hidden bg-slate-200 border border-slate-200 shadow-inner relative group/img">
-                                                <img src={slide.image} alt="Preview" className="w-full h-full object-cover" />
+                                                <img src={getImageUrl(slide.image)} alt="Preview" className="w-full h-full object-cover" />
                                                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
                                                     <p className="text-white text-xs font-bold">Preview Mode</p>
                                                 </div>
@@ -486,14 +547,32 @@ const ContentManagerPage = () => {
                                 </div>
 
                                 {/* Image URL */}
+                                {/* Image Selection: File Upload OR URL */}
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 mb-2 block uppercase tracking-wider">Background Image URL</label>
+                                    <label className="text-xs font-bold text-slate-500 mb-2 block uppercase tracking-wider">Background Image</label>
+
+                                    <div className="flex gap-4 mb-3">
+                                        <label className="flex-1 cursor-pointer bg-white border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-all rounded-xl p-3 flex flex-col items-center justify-center gap-2 text-slate-500 group/upload">
+                                            <FiUpload className="text-xl group-hover/upload:text-primary transition-colors" />
+                                            <span className="text-xs font-bold">Upload File</span>
+                                            <input
+                                                type="file"
+                                                className="hidden"
+                                                onChange={(e) => uploadFileHandler(e, index, 'hero')}
+                                            />
+                                        </label>
+                                        <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-1 flex items-center justify-center">
+                                            <span className="text-xs font-bold text-slate-400 uppercase">OR</span>
+                                        </div>
+                                    </div>
+
                                     <div className="relative">
                                         <input
                                             type="text"
-                                            value={slide.image}
+                                            value={getImageUrl(slide.image)}
                                             onChange={(e) => handleHeroChange(index, 'image', e.target.value)}
                                             className="w-full bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 px-4 py-3 pl-10 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                            placeholder="Paste Image URL"
                                         />
                                         <FiImage className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                     </div>
@@ -579,18 +658,30 @@ const ContentManagerPage = () => {
 
                                     {card.id !== 'promo' && (
                                         <div>
-                                            <label className="text-xs font-bold text-slate-400 mb-1 block">Image URL</label>
-                                            <div className="flex gap-2">
+                                            <label className="text-xs font-bold text-slate-400 mb-1 block">Image</label>
+
+                                            <div className="grid grid-cols-[1fr,auto] gap-2 mb-2">
                                                 <input
                                                     type="text"
-                                                    value={card.image}
+                                                    value={getImageUrl(card.image)}
                                                     onChange={(e) => handleCardChange(index, 'image', e.target.value)}
-                                                    className="flex-1 bg-slate-50 border-none rounded-xl text-xs font-mono text-slate-500 px-4 py-2 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                                    className="bg-slate-50 border-none rounded-xl text-xs font-mono text-slate-500 px-4 py-2 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                                    placeholder="URL..."
                                                 />
                                                 <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
-                                                    <img src={card.image} alt="Prev" className="w-full h-full object-cover" />
+                                                    <img src={getImageUrl(card.image)} alt="Prev" className="w-full h-full object-cover" />
                                                 </div>
                                             </div>
+
+                                            <label className="cursor-pointer bg-white border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-all rounded-xl py-2 px-4 flex items-center justify-center gap-2 text-slate-500 text-xs font-bold group/upload">
+                                                <FiUpload className="group-hover/upload:text-primary transition-colors" />
+                                                <span>Upload File Instead</span>
+                                                <input
+                                                    type="file"
+                                                    className="hidden"
+                                                    onChange={(e) => uploadFileHandler(e, index, 'card')}
+                                                />
+                                            </label>
                                         </div>
                                     )}
 

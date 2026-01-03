@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { listUsers, deleteUser, incrementMessageCount, decrementMessageCount, resetMessageCount } from '../../slices/userSlice';
@@ -22,6 +22,11 @@ const UserListPage = () => {
 
     // Chat Modal State
     const [activeChatUser, setActiveChatUser] = useState(null);
+    const activeChatUserRef = useRef(activeChatUser);
+
+    useEffect(() => {
+        activeChatUserRef.current = activeChatUser;
+    }, [activeChatUser]);
 
     // Items Details Modal State
     const [itemModal, setItemModal] = useState({ isOpen: false, type: 'cart', userId: null });
@@ -39,6 +44,10 @@ const UserListPage = () => {
             socket.on('newMessage', (msg) => {
                 const senderId = msg.sender._id || msg.sender;
                 if (userInfo && senderId !== userInfo._id) {
+                    // Don't increment if we are currently chatting with this user
+                    if (activeChatUserRef.current && activeChatUserRef.current._id === senderId) {
+                        return;
+                    }
                     dispatch(incrementMessageCount(senderId));
                 }
             });
@@ -140,6 +149,11 @@ const UserListPage = () => {
         if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
         if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
         return date.toLocaleDateString();
+    };
+
+    const handleChatOpen = (user) => {
+        setActiveChatUser(user);
+        dispatch(resetMessageCount(user._id));
     };
 
     const closeChatHandler = () => {
@@ -307,7 +321,7 @@ const UserListPage = () => {
                                         </td>
                                         <td className="p-4 md:p-6">
                                             <button
-                                                onClick={() => setActiveChatUser(user)}
+                                                onClick={() => handleChatOpen(user)}
                                                 className="flex items-center gap-2 group/chat hover:opacity-80 transition-opacity"
                                             >
                                                 <div className={`w - 8 h - 8 rounded - lg flex items - center justify - center transition - all ${user.unreadMessageCount > 0 ? 'bg-red-50 text-red-500 border border-red-100 shadow-sm animate-pulse' : 'bg-slate-50 text-slate-400 group-hover/chat:bg-primary/10 group-hover/chat:text-primary'} `}>

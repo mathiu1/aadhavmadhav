@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProductDetails, updateProduct, resetAdminState } from '../../slices/productSlice';
-import { FiArrowLeft, FiSave, FiBox, FiDollarSign, FiLayers, FiImage, FiFileText, FiPercent, FiAlertCircle, FiClock, FiUser, FiEdit, FiUpload, FiTrash2 } from 'react-icons/fi';
+import { FiArrowLeft, FiSave, FiBox, FiLayers, FiImage, FiFileText, FiPercent, FiAlertCircle, FiClock, FiUser, FiEdit, FiUpload, FiTrash2 } from 'react-icons/fi';
+import { FaRupeeSign } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getImageUrl } from '../../utils/imageUrl';
@@ -24,6 +25,7 @@ const ProductEditPage = () => {
     const [countInStock, setCountInStock] = useState(0);
     const [description, setDescription] = useState('');
     const [validationError, setValidationError] = useState('');
+    const [imageUrlInput, setImageUrlInput] = useState('');
 
     const { product, isLoading, error, updateLoading, updateSuccess, updateError } = useSelector((state) => state.product);
 
@@ -88,8 +90,41 @@ const ProductEditPage = () => {
         }
     };
 
+    const deleteOldImage = async (imagePath) => {
+        if (imagePath && imagePath.includes('/uploads/')) {
+            const parts = imagePath.split('/uploads/');
+            const filename = parts[parts.length - 1];
+
+            if (!filename || filename.includes('/') || filename.includes('\\')) return;
+
+            try {
+                await api.delete(`/upload/${filename}`);
+                toast.success('File deleted from server');
+            } catch (err) {
+                console.error("Failed to delete old image", err);
+            }
+        }
+    };
+
     const removeImage = (indexToRemove) => {
+        const imageToRemove = images[indexToRemove];
+        if (imageToRemove) {
+            deleteOldImage(imageToRemove);
+        }
         setImages(images.filter((_, index) => index !== indexToRemove));
+    };
+
+    const addImageUrlHandler = () => {
+        if (!imageUrlInput.trim()) return;
+
+        if (images.length >= 5) {
+            toast.error('Maximum 5 images allowed');
+            return;
+        }
+
+        setImages((prev) => [...prev, imageUrlInput.trim()]);
+        setImageUrlInput('');
+        toast.success('Image URL added!');
     };
 
     const submitHandler = (e) => {
@@ -237,7 +272,7 @@ const ProductEditPage = () => {
                         {/* Pricing & Inventory Card */}
                         <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100">
                             <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
-                                <FiDollarSign className="text-primary" /> Pricing & Inventory
+                                <FaRupeeSign className="text-primary" /> Pricing & Inventory
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
@@ -248,6 +283,8 @@ const ProductEditPage = () => {
                                         </div>
                                         <input
                                             type="number"
+                                            min="0"
+                                            onWheel={(e) => e.target.blur()}
                                             className="w-full pl-10 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-500 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all line-through decoration-slate-400"
                                             placeholder="0.00"
                                             value={oldPrice}
@@ -263,6 +300,8 @@ const ProductEditPage = () => {
                                         </div>
                                         <input
                                             type="number"
+                                            min="0"
+                                            onWheel={(e) => e.target.blur()}
                                             className="w-full pl-10 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                                             placeholder="0.00"
                                             value={price}
@@ -276,6 +315,8 @@ const ProductEditPage = () => {
                                     <div className="relative">
                                         <input
                                             type="number"
+                                            min="0"
+                                            onWheel={(e) => e.target.blur()}
                                             className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                                             placeholder="0"
                                             value={countInStock}
@@ -317,6 +358,36 @@ const ProductEditPage = () => {
                                             disabled={uploading || images.length >= 5}
                                         />
                                     </label>
+                                </div>
+
+                                <div className="flex items-center gap-2 text-slate-300 font-bold text-xs uppercase my-2">
+                                    <span className="h-px bg-slate-200 flex-1"></span>
+                                    OR
+                                    <span className="h-px bg-slate-200 flex-1"></span>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+                                        placeholder="Paste image URL..."
+                                        value={imageUrlInput}
+                                        onChange={(e) => setImageUrlInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                addImageUrlHandler();
+                                            }
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={addImageUrlHandler}
+                                        disabled={!imageUrlInput.trim() || images.length >= 5}
+                                        className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Add
+                                    </button>
                                 </div>
 
                                 {/* Image Grid */}

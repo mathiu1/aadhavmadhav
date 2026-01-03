@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { FiSend as SendIcon, FiX as CloseIcon, FiMinimize2, FiMaximize2, FiMessageSquare, FiTrash2 } from 'react-icons/fi';
+import { FiSend as SendIcon, FiX as CloseIcon, FiMinimize2, FiMaximize2, FiMessageSquare, FiTrash2, FiPhone } from 'react-icons/fi';
 import { getMessages, sendMessage, addMessage, markAsRead, deleteMessage, removeMessage } from '../slices/messageSlice';
 import { useSocketContext } from '../context/SocketContext';
+import { useCallContext } from '../context/CallContext';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 
 const formatLastSeen = (date) => {
@@ -26,6 +27,7 @@ const ChatWindow = ({ conversationUserId, title, onClose, isWidget = false, isOp
     const { messages, loading, hasMore } = useSelector((state) => state.messages);
     const { userInfo } = useSelector((state) => state.auth);
     const { socket, onlineUsers } = useSocketContext();
+    const { initiateCall } = useCallContext();
     const [text, setText] = useState('');
     const messagesEndRef = useRef(null);
     const chatContainerRef = useRef(null);
@@ -34,17 +36,24 @@ const ChatWindow = ({ conversationUserId, title, onClose, isWidget = false, isOp
     const [offset, setOffset] = useState(0);
     const [prevScrollHeight, setPrevScrollHeight] = useState(0);
 
-    const isOnline = onlineUsers.includes(conversationUserId);
+    // Force "Online" status for Customers viewing Support (to keep Call button enabled always), 
+    // otherwise check real status for Admins viewing Users.
+    const isOnline = !userInfo.isAdmin ? true : onlineUsers.some(id => String(id) === String(conversationUserId));
+
+    // Determine the relevant User ID for data fetching (Messages belong to the Customer)
+    // If I am Admin, I fetch messages for the 'conversationUserId' (Customer)
+    // If I am Customer, I fetch messages for MYSELF (userInfo._id)
+    const dataUserId = userInfo.isAdmin ? conversationUserId : userInfo._id;
 
     // Fetch messages on mount
     useEffect(() => {
-        if (conversationUserId && isOpen) {
+        if (dataUserId && isOpen) {
             setOffset(0);
-            dispatch(getMessages({ userId: conversationUserId, offset: 0 }));
+            dispatch(getMessages({ userId: dataUserId, offset: 0 }));
             // Mark as read and reset local count
-            dispatch(markAsRead(conversationUserId));
+            dispatch(markAsRead(dataUserId));
         }
-    }, [dispatch, conversationUserId, isOpen]);
+    }, [dispatch, dataUserId, isOpen]);
 
     // Restore scroll position when loading previous messages
     useLayoutEffect(() => {
@@ -71,7 +80,7 @@ const ChatWindow = ({ conversationUserId, title, onClose, isWidget = false, isOp
             setPrevScrollHeight(scrollHeight);
             const newOffset = offset + 10;
             setOffset(newOffset);
-            dispatch(getMessages({ userId: conversationUserId, offset: newOffset }));
+            dispatch(getMessages({ userId: dataUserId, offset: newOffset }));
         }
     };
 
@@ -79,9 +88,25 @@ const ChatWindow = ({ conversationUserId, title, onClose, isWidget = false, isOp
     useEffect(() => {
         if (socket) {
             socket.on("newMessage", (newMessage) => {
-                const isRelevant = newMessage.user === conversationUserId;
+                const msgUserId = newMessage.user._id || newMessage.user;
+
+                let isRelevant = false;
+
+                if (userInfo.isAdmin) {
+                    // Admin: Relevant if message belongs to the user I am viewing
+                    isRelevant = msgUserId && conversationUserId && msgUserId.toString() === conversationUserId.toString();
+                } else {
+                    // Customer: Relevant if message belongs to ME (since all support messages are owned by the customer)
+                    // We don't check conversationUserId (Admin ID) because the message 'user' field is always the Customer.
+                    // Note: conversationUserId is still useful for Online Status check of the Agent.
+                    isRelevant = msgUserId && userInfo._id && msgUserId.toString() === userInfo._id.toString();
+                }
+
                 if (isRelevant) {
                     dispatch(addMessage(newMessage));
+                    if (isOpen) {
+                        dispatch(markAsRead(dataUserId));
+                    }
                 }
             });
 
@@ -179,14 +204,28 @@ const ChatWindow = ({ conversationUserId, title, onClose, isWidget = false, isOp
                         </span>
                     </div>
                 </div>
-                <div className="flex gap-4">
-                    {isWidget && (
-                        <button onClick={() => setIsMinimized(true)} className="text-slate-400 hover:text-white transition-colors">
-                            <FiMinimize2 size={20} />
-                        </button>
-                    )}
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 md:gap-3">
+                        {conversationUserId && (
+                            <button
+                                onClick={() => initiateCall(conversationUserId)}
+                                className="p-2 md:p-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg shadow-purple-500/20"
+                                title="Start Voice Call"
+                            >
+                                <FiPhone size={18} className="md:w-5 md:h-5" />
+                            </button>
+                        )}
+                        {isWidget && (
+                            <button
+                                onClick={() => setIsMinimized(!isMinimized)}
+                                className="p-2 md:p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all duration-300"
+                            >
+                                <FiMinimize2 size={20} />
+                            </button>
+                        )}
+                    </div>
                     {onClose && (
-                        <button onClick={onClose} className="text-slate-400 hover:text-red-400 transition-colors">
+                        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                             <CloseIcon size={20} />
                         </button>
                     )}
@@ -205,6 +244,15 @@ const ChatWindow = ({ conversationUserId, title, onClose, isWidget = false, isOp
                     </div>
                 ) : (
                     <>
+                        {messages.length === 0 && (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-70">
+                                <div className="p-4 bg-slate-100 rounded-full mb-3">
+                                    <FiMessageSquare size={32} />
+                                </div>
+                                <p className="font-bold text-sm">Welcome to Support!</p>
+                                <p className="text-xs">Type a message to start chatting.</p>
+                            </div>
+                        )}
                         {loading && offset > 0 && (
                             <div className="flex justify-center p-2">
                                 <AiOutlineLoading3Quarters className="animate-spin text-slate-400 text-sm" />

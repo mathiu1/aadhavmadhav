@@ -2,11 +2,29 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RiCustomerService2Fill } from 'react-icons/ri';
 import ChatWindow from './ChatWindow';
 import { toggleChat } from '../slices/messageSlice';
+import { useEffect, useState } from 'react';
+import api from '../api/axios';
 
 const ChatWidget = () => {
     const dispatch = useDispatch();
     const { userInfo } = useSelector((state) => state.auth);
     const { isChatOpen, unreadCount } = useSelector((state) => state.messages);
+    const [supportAgentId, setSupportAgentId] = useState(null);
+
+    useEffect(() => {
+        const fetchSupportAgent = async () => {
+            try {
+                const { data } = await api.get('/users/support-agent');
+                setSupportAgentId(data._id);
+            } catch (error) {
+                console.error("No support agent found", error);
+            }
+        };
+
+        if (userInfo && !userInfo.isAdmin && isChatOpen) {
+            fetchSupportAgent();
+        }
+    }, [userInfo, isChatOpen]);
 
     if (!userInfo) return null;
 
@@ -29,7 +47,7 @@ const ChatWidget = () => {
             )}
 
             <ChatWindow
-                conversationUserId={userInfo._id}
+                conversationUserId={supportAgentId || userInfo._id} // Fallback to self (echo) if no admin found, but ideally should disable call
                 title="Customer Support"
                 isOpen={isChatOpen}
                 onClose={() => dispatch(toggleChat(false))}

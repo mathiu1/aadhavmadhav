@@ -63,8 +63,10 @@ const sendSystemMessage = async (req, receiverId, text, specificSenderId = null)
             isRead: false
         });
 
-        // Populate for socket emission
-        const populatedMessage = await Message.findById(message._id).populate('sender', 'name isAdmin');
+        // Populate for socket emission - Populate BOTH sender and user to ensure consistent ID access on client
+        const populatedMessage = await Message.findById(message._id)
+            .populate('sender', 'name isAdmin')
+            .populate('user', 'name email');
 
         const io = req.app.get('io');
         if (io) {

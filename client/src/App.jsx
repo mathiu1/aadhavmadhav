@@ -29,6 +29,7 @@ import DashboardPage from './pages/admin/DashboardPage';
 import ReviewListPage from './pages/admin/ReviewListPage';
 import ErrorLogPage from './pages/admin/ErrorLogPage';
 import ContentManagerPage from './pages/admin/ContentManagerPage';
+import CallHistoryPage from './pages/admin/CallHistoryPage';
 import AdminLayout from './components/AdminLayout';
 import NetworkStatus from './components/NetworkStatus';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -38,6 +39,8 @@ import api from './api/axios';
 
 import ChatWidget from './components/ChatWidget';
 import ScrollToTop from './components/ScrollToTop';
+
+import CallOverlay from './components/CallOverlay';
 
 function App() {
   const dispatch = useDispatch();
@@ -77,6 +80,7 @@ function App() {
       <NetworkStatus />
       <ErrorBoundary>
         <Toaster position="top-center" reverseOrder={false} />
+        <CallOverlay />
         <ChatWidget />
         <div className="min-h-screen flex flex-col relative bg-slate-50">
           {/* Subtle decorative background blobs */}
@@ -134,6 +138,7 @@ function App() {
                   <Route path="product/:id/edit" element={<ProductEditPage />} />
                   <Route path="orders" element={<OrderListPage />} />
                   <Route path="users" element={<UserListPage />} />
+                  <Route path="calls" element={<CallHistoryPage />} />
                   <Route path="user/:id/edit" element={<UserEditPage />} />
                   <Route path="reviews" element={<ReviewListPage />} />
                   <Route path="errors" element={<ErrorLogPage />} />

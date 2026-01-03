@@ -11,9 +11,11 @@ const {
     updateUser,
     toggleFavorite,
     getFavorites,
+    getSupportAgent
 } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
+router.get('/support-agent', protect, getSupportAgent);
 router.route('/').post(registerUser).get(protect, admin, getUsers);
 router.post('/login', authUser);
 router.post('/logout', logoutUser);

@@ -6,6 +6,7 @@ import api from '../api/axios';
 import ProductCard from '../components/ProductCard';
 import { Link } from 'react-router-dom';
 import { FaFire, FaArrowRight, FaStar } from 'react-icons/fa';
+import { getImageUrl } from '../utils/imageUrl';
 
 // Fallback slides in case of API failure or initial load delay
 const defaultSlides = [
@@ -210,7 +211,7 @@ const HomePage = () => {
                         {/* Background Image */}
                         <div className="absolute inset-0">
                             <img
-                                src={activeSlides[currentSlide].image}
+                                src={getImageUrl(activeSlides[currentSlide].image)}
                                 alt="Hero Background"
                                 className="w-full h-full object-cover transition-transform duration-[10s] ease-linear transform scale-100 group-hover:scale-110"
                             />
@@ -287,7 +288,7 @@ const HomePage = () => {
                     {/* Item 0: Main (Large) */}
                     {cards[0] && (
                         <Link to={cards[0].link} className="md:col-span-2 md:row-span-2 group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[200px] md:h-auto">
-                            <img src={cards[0].image} alt={cards[0].title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                            <img src={getImageUrl(cards[0].image)} alt={cards[0].title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                             <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8 text-white">
                                 <p className="text-[10px] md:text-sm font-bold bg-white/20 backdrop-blur-md inline-block px-2 md:px-3 py-1 rounded-lg mb-1 md:mb-2">{cards[0].subtitle}</p>
@@ -300,7 +301,7 @@ const HomePage = () => {
                     {/* Item 1: Tall */}
                     {cards[1] && (
                         <Link to={cards[1].link} className="md:col-span-1 md:row-span-2 group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[180px] md:h-auto">
-                            <img src={cards[1].image} alt={cards[1].title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                            <img src={getImageUrl(cards[1].image)} alt={cards[1].title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                             <div className="absolute bottom-4 left-4 text-white">
                                 <h3 className="text-xl md:text-2xl font-bold mb-1">{cards[1].title}</h3>
@@ -312,7 +313,7 @@ const HomePage = () => {
                     {/* Item 2: Square Top */}
                     {cards[2] && cards[2].isEnabled !== false && (
                         <Link to={cards[2].link} className={`md:col-span-1 ${cards[3]?.isEnabled === false ? 'md:row-span-2' : 'md:row-span-1'} group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[150px] md:h-auto`}>
-                            <img src={cards[2].image} alt={cards[2].title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                            <img src={getImageUrl(cards[2].image)} alt={cards[2].title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                             <div className="absolute bottom-4 left-4 text-white">
                                 <h3 className="text-xl md:text-2xl font-bold mb-1">{cards[2].title}</h3>
@@ -342,7 +343,7 @@ const HomePage = () => {
                         {cards.slice(4).map((card, index) => (
                             card.isEnabled !== false && (
                                 <Link key={index + 4} to={card.link} className="group relative rounded-2xl md:rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 h-[150px] md:h-[200px]">
-                                    <img src={card.image} alt={card.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                    <img src={getImageUrl(card.image)} alt={card.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"></div>
                                     <div className="absolute bottom-4 left-4 text-white">
                                         <h3 className="text-xl md:text-2xl font-bold mb-1">{card.title}</h3>

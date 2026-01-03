@@ -6,7 +6,7 @@ import { BsFillChatSquareDotsFill } from "react-icons/bs";
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchCart } from '../slices/cartSlice';
 import { logout } from '../slices/authSlice';
-import { getUnreadCount, incrementUnreadCount } from '../slices/messageSlice';
+import { getUnreadCount, incrementUnreadCount, markAsRead } from '../slices/messageSlice';
 import { useSocketContext } from '../context/SocketContext';
 import api from '../api/axios';
 import { getImageUrl } from '../utils/imageUrl';
@@ -75,7 +75,7 @@ const Header = () => {
     const cart = useSelector((state) => state.cart);
     // ...
 
-    const { unreadCount } = useSelector((state) => state.messages);
+    const { unreadCount, isChatOpen } = useSelector((state) => state.messages);
 
     const submitHandler = (e) => {
         e.preventDefault();
@@ -106,9 +106,35 @@ const Header = () => {
             socket.on("newMessage", (newMessage) => {
                 // Safely handle both populated object and ID string
                 const senderId = newMessage.sender._id || newMessage.sender;
+                const msgUserId = newMessage.user._id || newMessage.user; // The conversation owner
 
-                if (senderId !== userInfo._id) {
-                    dispatch(incrementUnreadCount());
+                // 1. Ignore my own messages
+                if (senderId === userInfo._id) return;
+
+                // 2. Determine if this message is relevant to me
+                let isRelevant = false;
+
+                if (userInfo.isAdmin) {
+                    // Admin cares about:
+                    // a) Messages from customers (Sender is the User/Owner of conversation)
+                    // b) Personal messages to the Admin (User is the Admin)
+                    if (senderId === msgUserId || msgUserId === userInfo._id) {
+                        isRelevant = true;
+                    }
+                } else {
+                    // Customer only cares about messages belonging to THEIR conversation
+                    if (msgUserId === userInfo._id) {
+                        isRelevant = true;
+                    }
+                }
+
+                if (isRelevant) {
+                    // If customer and chat is open, mark as read immediately and don't increment
+                    if (!userInfo.isAdmin && isChatOpen) {
+                        dispatch(markAsRead(userInfo._id));
+                    } else {
+                        dispatch(incrementUnreadCount());
+                    }
                 }
             });
 
@@ -134,7 +160,7 @@ const Header = () => {
                 socket.off("messageDeleted");
             };
         }
-    }, [socket, dispatch, userInfo]);
+    }, [socket, dispatch, userInfo, isChatOpen]);
 
     return (
         <header className="sticky top-0 z-50 pt-2 md:pt-4 px-2 md:px-4 pb-2">

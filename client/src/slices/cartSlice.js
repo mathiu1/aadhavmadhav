@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../api/axios';
+import { logout } from './authSlice';
 
 const initialState = {
     cartItems: [],
@@ -100,6 +101,10 @@ const cartSlice = createSlice({
             })
             .addCase(removeFromCart.fulfilled, (state, action) => {
                 state.cartItems = action.payload;
+            })
+            .addCase(logout.fulfilled, (state) => {
+                state.cartItems = [];
+                state.error = null;
             });
     }
 });

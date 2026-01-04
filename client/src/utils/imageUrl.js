@@ -4,7 +4,7 @@ export const getImageUrl = (path) => {
         return path;
     }
     // Assuming server runs on port 5000 locally
+    //const BASE_URL = 'https://aadhavmadhav.onrender.com';
     const BASE_URL = 'https://aadhavmadhav.onrender.com';
-    //const BASE_URL = 'http://localhost:5000';
     return `${BASE_URL}${path}`;
 };

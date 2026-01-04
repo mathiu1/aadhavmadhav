@@ -27,7 +27,7 @@ const ChatWindow = ({ conversationUserId, title, onClose, isWidget = false, isOp
     const { messages, loading, hasMore } = useSelector((state) => state.messages);
     const { userInfo } = useSelector((state) => state.auth);
     const { socket, onlineUsers } = useSocketContext();
-    const { initiateCall } = useCallContext();
+    const { initiateCall, callStatus } = useCallContext();
     const [text, setText] = useState('');
     const messagesEndRef = useRef(null);
     const chatContainerRef = useRef(null);
@@ -209,8 +209,12 @@ const ChatWindow = ({ conversationUserId, title, onClose, isWidget = false, isOp
                         {conversationUserId && (
                             <button
                                 onClick={() => initiateCall(conversationUserId)}
-                                className="p-2 md:p-2.5 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg shadow-purple-500/20"
-                                title="Start Voice Call"
+                                disabled={callStatus !== 'idle'}
+                                className={`p-2 md:p-2.5 rounded-xl transition-all duration-300 transform shadow-lg ${callStatus !== 'idle'
+                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                        : 'bg-primary/10 text-primary hover:bg-primary hover:text-white hover:scale-105 active:scale-95 shadow-purple-500/20'
+                                    }`}
+                                title={callStatus !== 'idle' ? "Call in progress" : "Start Voice Call"}
                             >
                                 <FiPhone size={18} className="md:w-5 md:h-5" />
                             </button>

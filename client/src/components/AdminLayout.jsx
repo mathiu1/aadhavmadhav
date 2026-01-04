@@ -10,8 +10,7 @@ import toast from "react-hot-toast";
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const dispatch = useDispatch();
-  //"https://aadhavmadhav.onrender.com"
-  // "http://localhost:5000"
+
   useEffect(() => {
     const socket = io("https://aadhavmadhav.onrender.com");
 

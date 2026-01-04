@@ -19,6 +19,8 @@ export const CallContextProvider = ({ children }) => {
     const [incomingCalls, setIncomingCalls] = useState([]); // Queue of incoming calls
 
     const [callData, setCallData] = useState(null); // { from, name, signal... }
+    const [activeVoiceCalls, setActiveVoiceCalls] = useState([]); // [{ caller, receiver, ... }]
+
     const [stream, setStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
     const [callDuration, setCallDuration] = useState(0);
@@ -28,7 +30,28 @@ export const CallContextProvider = ({ children }) => {
     const connectionRef = useRef();
     const timerRef = useRef();
 
+    useEffect(() => {
+        if (!socket) return;
+        socket.on('activeVoiceCalls', (calls) => {
+            setActiveVoiceCalls(calls);
+
+            // SYNC SAFETY: If it's active, it's not incoming anymore.
+            // Remove any incoming call that matches an active call (by ID or CallLog)
+            setIncomingCalls(prev => prev.filter(inc => {
+                const isActive = calls.some(act =>
+                    (inc.callLogId && act.callLogId === inc.callLogId) ||
+                    (inc.callerId && act.caller.id === inc.callerId) ||
+                    (inc.from && act.caller.id === inc.from) // Fallback if inc.from matches MongoID (unlikely but possible)
+                );
+                return !isActive;
+            }));
+        });
+        return () => socket.off('activeVoiceCalls');
+    }, [socket]);
+
     // ...
+
+
 
     useEffect(() => {
         if (!socket) return;
@@ -74,7 +97,56 @@ export const CallContextProvider = ({ children }) => {
 
         socket.on('callEnded', () => {
             toast("Call ended");
+            // Do NOT wipe incoming calls here. Queue should persist.
             leaveCall();
+        });
+
+        socket.on('callTaken', ({ callLogId }) => {
+            // Another admin answered this call
+            setIncomingCalls(prev => {
+                const updated = prev.filter(c => c.callLogId !== callLogId);
+                return updated;
+            });
+
+            // If we were looking at this call as the main one
+            setCallData(current => {
+                if (current?.callLogId === callLogId) {
+                    setCallStatus('idle');
+                    return null;
+                }
+                return current;
+            });
+        });
+
+        socket.on('callCancelled', ({ callLogId, callerId }) => {
+            // Caller hung up before answer
+            // Remove by callLogId OR callerId (to cover all bases)
+            setIncomingCalls(prev => {
+                const updated = prev.filter(c => {
+                    const matchesLogId = callLogId && c.callLogId === callLogId;
+                    // Robust string comparison for IDs
+                    const matchesCaller = callerId && (
+                        (c.from && c.from.toString() === callerId.toString()) ||
+                        (c.caller && c.caller.toString() === callerId.toString())
+                    );
+                    return !matchesLogId && !matchesCaller;
+                });
+                return updated;
+            });
+
+            setCallData(current => {
+                const currentCallerId = current?.from || current?.caller?.id || current?.caller;
+                // Check match
+                const matchesLogId = callLogId && current?.callLogId === callLogId;
+                const matchesCaller = callerId && currentCallerId && currentCallerId.toString() === callerId.toString();
+
+                if (matchesLogId || matchesCaller) {
+                    setCallStatus('idle');
+                    toast("Caller hung up");
+                    return null;
+                }
+                return current;
+            });
         });
 
         return () => {
@@ -82,6 +154,8 @@ export const CallContextProvider = ({ children }) => {
             socket.off('callAccepted');
             socket.off('callRejected');
             socket.off('callEnded');
+            socket.off('callTaken');
+            socket.off('callCancelled');
         };
     }, [socket]);
 
@@ -98,6 +172,26 @@ export const CallContextProvider = ({ children }) => {
         return () => clearTimeout(timeout);
     }, [callStatus]);
 
+    // STALE CALL PRUNER: Automatically remove incoming calls that are stuck (older than 45s)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setIncomingCalls(prev => {
+                const now = Date.now();
+                // Keep calls less than 45s old
+                const liveCalls = prev.filter(c => (now - c.receivedAt) < 45000);
+
+                if (liveCalls.length !== prev.length) {
+                    // If we removed something, check if we need to reset main view
+                    // We can't easily access 'callData' inside this setter without ref or dependency, 
+                    // but usually 'callData' is managed by callStatus or user interaction.
+                    // If callData refers to a dead call, let the user manually close or let other timeouts handle it.
+                }
+                return liveCalls;
+            });
+        }, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
     const startTimer = () => {
         setCallDuration(0);
         timerRef.current = setInterval(() => {
@@ -113,11 +207,27 @@ export const CallContextProvider = ({ children }) => {
     };
 
     const initiateCall = (idToCall) => {
+        if (callStatus !== 'idle') {
+            toast.error("You are already in a call");
+            return;
+        }
+
         setCallStatus('calling');
         // Set callData for the caller so they know who to disconnect from
         setCallData({ from: idToCall, name: 'Calling...' });
 
-        navigator.mediaDevices.getUserMedia({ video: false, audio: true })
+        navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                channelCount: 1,
+                sampleRate: 48000,
+                sampleSize: 16,
+                latency: 0
+            }
+        })
             .then((currentStream) => {
                 setStream(currentStream);
                 // myVideo.current.srcObject = currentStream; // If video enabled
@@ -125,7 +235,14 @@ export const CallContextProvider = ({ children }) => {
                 const peer = new SimplePeer({
                     initiator: true,
                     trickle: false,
-                    stream: currentStream
+                    stream: currentStream,
+                    config: {
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:global.stun.twilio.com:3478' }
+                        ],
+                        iceCandidatePoolSize: 10,
+                    }
                 });
 
                 peer.on('signal', (data) => {
@@ -167,7 +284,21 @@ export const CallContextProvider = ({ children }) => {
             });
     };
 
-    const answerCall = () => {
+    const answerCall = (specificCall = null) => {
+        if (callStatus === 'connected' || callStatus === 'calling') {
+            toast.error("Finish current call first!");
+            return;
+        }
+
+        // If specificCall provided (from Queue UI), use it. activeCall might be different or null.
+        const callToAnswer = specificCall || callData;
+
+        if (!callToAnswer) return;
+
+        setCallData(callToAnswer); // Ensure it's the active one
+        // Remove from queue
+        setIncomingCalls(prev => prev.filter(c => c.callLogId !== callToAnswer.callLogId));
+
         setCallStatus('connected');
         startTimer();
 
@@ -176,21 +307,39 @@ export const CallContextProvider = ({ children }) => {
         // If I called myself, callData.from is ME.
         // So I answer myself. Loop.
 
-        navigator.mediaDevices.getUserMedia({ video: false, audio: true })
+        navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                channelCount: 1,
+                sampleRate: 48000,
+                sampleSize: 16,
+                latency: 0
+            }
+        })
             .then((currentStream) => {
                 setStream(currentStream);
 
                 const peer = new SimplePeer({
                     initiator: false,
                     trickle: false,
-                    stream: currentStream
+                    stream: currentStream,
+                    config: {
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:global.stun.twilio.com:3478' }
+                        ],
+                        iceCandidatePoolSize: 10,
+                    }
                 });
 
                 peer.on('signal', (data) => {
                     socket.emit('answerCall', {
                         signal: data,
-                        to: callData.from,
-                        callLogId: callData.callLogId
+                        to: callToAnswer.from, // Use captured ref
+                        callLogId: callToAnswer.callLogId
                     });
                 });
 
@@ -198,7 +347,7 @@ export const CallContextProvider = ({ children }) => {
                     setRemoteStream(currentRemoteStream);
                 });
 
-                peer.signal(callData.signal);
+                peer.signal(callToAnswer.signal);
                 connectionRef.current = peer;
             })
             .catch(err => {
@@ -215,14 +364,28 @@ export const CallContextProvider = ({ children }) => {
             });
     };
 
-    const rejectCall = () => {
+    const rejectCall = (specificCallKey = null) => {
+        // If rejecting a specific queued call
+        if (specificCallKey) {
+            const callToReject = incomingCalls.find(c => c.from === specificCallKey || c.callLogId === specificCallKey);
+            if (callToReject) {
+                socket.emit('rejectCall', { to: callToReject.from });
+                setIncomingCalls(prev => prev.filter(c => c.callLogId !== callToReject.callLogId));
+                // If this was also the 'callData' (preview), clear it if no others
+                if (callData?.callLogId === callToReject.callLogId) {
+                    setCallStatus('idle');
+                }
+            }
+            return;
+        }
+
         if (callData?.from) {
             socket.emit('rejectCall', { to: callData.from });
         }
         leaveCall();
     };
 
-    const leaveCall = () => {
+    const leaveCall = (targetId = null) => {
         setCallStatus('ending');
         setTimeout(() => setCallStatus('idle'), 1000); // Small delay for UI animation
 
@@ -232,8 +395,13 @@ export const CallContextProvider = ({ children }) => {
 
         // Clean up connection
         // Added 'calling' check to allow caller to cancel before pickup
-        if (callData?.from && (callStatus === 'connected' || callStatus === 'calling')) {
-            socket.emit('endCall', { to: callData.from });
+        // Use targetId if provided, otherwise fallback to callData
+        const idToEnd = targetId || callData?.from;
+
+        // FORCE END: Emit 'endCall' if we have a target ID, regardless of local callStatus.
+        // This ensures we can kill 'stuck' calls or calls where state was lost (e.g. refresh).
+        if (idToEnd) {
+            socket.emit('endCall', { to: idToEnd });
         }
 
         // Stop local stream
@@ -243,8 +411,13 @@ export const CallContextProvider = ({ children }) => {
         }
 
         setRemoteStream(null);
-        setCallData(null);
-        stopTimer();
+        // Only clear callData if we are ending the current focused call
+        if (!targetId || (callData && targetId === callData.from)) {
+            setCallData(null);
+            stopTimer();
+        }
+
+        // Note: activeVoiceCalls update will come from server via socket event
     };
 
 
@@ -252,6 +425,8 @@ export const CallContextProvider = ({ children }) => {
         <CallContext.Provider value={{
             callStatus,
             callData,
+            incomingCalls,
+            activeVoiceCalls,
             stream,
             remoteStream,
             callDuration,

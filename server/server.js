@@ -30,6 +30,7 @@ const io = new Server(server, {
 });
 
 const userSocketMap = {}; // { userId: socketId }
+let activeVoiceCalls = []; // Global Active Calls State
 
 app.set('io', io);
 
@@ -47,6 +48,9 @@ io.on('connection', (socket) => {
     // Emit online users
     io.emit('getOnlineUsers', Object.keys(userSocketMap));
 
+    // Sync active calls immediately to the new user
+    socket.emit('activeVoiceCalls', activeVoiceCalls);
+
     const sendSystemMessage = require('./src/utils/sendSystemMessage');
 
     // ... (keep existing imports)
@@ -54,73 +58,121 @@ io.on('connection', (socket) => {
     // ... inside io.on('connection') ...
 
     // --- Voice Call Signaling ---
-    socket.on("callUser", async ({ userToCall, signalData, from, name, isAdmin }) => {
-        // Create Call Log (Default status: missed - assuming no answer until updated)
+    socket.on("callUser", async (data) => {
+        const { userToCall, signalData, from, name, isAdmin } = data; // 'from' here is likely Socket ID from Client? Or User ID? Client sends 'me' (Socket ID) usually.
+
         let callLogId = null;
         try {
-            const newCall = await CallLog.create({
-                caller: from,
-                receiver: userToCall,
-                status: 'missed', // Will be updated to 'ongoing' if answered
+            // Create Call Log (Missed status initially)
+            const newCall = new CallLog({
+                caller: userId, // The authenticated User ID
+                receiver: userToCall, // This might be 'ADMINS' or specific ID
+                status: 'missed',
                 startTime: new Date()
             });
+            await newCall.save();
             callLogId = newCall._id;
-        } catch (err) {
-            console.error("Error creating call log:", err);
-        }
+        } catch (err) { console.error(err); }
 
-        const socketId = userSocketMap[userToCall];
-        if (socketId) {
-            io.to(socketId).emit("callUser", { signal: signalData, from, name, callLogId, isAdmin });
-        } else {
-            // User offline
-            io.to(socket.id).emit("callFailed", { reason: "User offline" });
-
-            // AUTOMATIC MISSED CALL NOTIFICATION
-            try {
-                if (isAdmin) {
-                    // Admin calling Customer (Offline)
-                    // Send to Customer: "You missed a call from support..."
-                    await sendSystemMessage({ app }, userToCall, `You missed a call from our support team (${name}). We'll try again shortly! 📞`, null);
-                } else {
-                    // Customer calling Admin (Offline)
-                    // Send to Customer's Thread (so Admin sees it later): "Missed Call from Customer..."
-                    // Note: receiverId = from (The Customer), so it goes into THEIR thread.
-                    await sendSystemMessage({ app }, from, `Missed voice call attempt from ${name} (Customer). Admins were offline. 📞`, null);
+        // Check if target is 'ADMINS' or specific user
+        let targetIsAdmin = false;
+        try {
+            if (userToCall === 'ADMIN' || userToCall === 'ADMINS') {
+                targetIsAdmin = true;
+            } else {
+                const targetUser = await User.findById(userToCall);
+                if (targetUser && targetUser.isAdmin) {
+                    targetIsAdmin = true;
                 }
-            } catch (msgErr) {
-                console.error("Failed to send auto-missed-call message", msgErr);
+            }
+        } catch (e) { console.error(e); }
+
+        if (targetIsAdmin) {
+            // BROADCAST TO ALL ONLINE ADMINS
+            const onlineAdmins = await User.find({ isAdmin: true, isOnline: true });
+
+            let sentCount = 0;
+            onlineAdmins.forEach(admin => {
+                const adminSocketId = userSocketMap[admin._id.toString()];
+                if (adminSocketId) {
+                    io.to(adminSocketId).emit("callUser", {
+                        signal: signalData,
+                        from, // Socket ID (for WebRTC reply)
+                        callerId: userId, // Mongo ID (for Logic/Cancel)
+                        name,
+                        callLogId,
+                        isAdmin // passed from caller (e.g. is caller admin?)
+                    });
+                    sentCount++;
+                }
+            });
+
+            if (sentCount === 0) {
+                // No admins online
+                io.to(socket.id).emit("callFailed", { reason: "No support agents online" });
+                // Send offline msg
+                try {
+                    const sendSystemMessage = require('./src/utils/sendSystemMessage');
+                    await sendSystemMessage({ app }, userId, `Missed voice call attempt from ${name} (Customer). Admins were offline. 📞`, null);
+                } catch (e) { }
+            }
+
+        } else {
+            // Normal 1-to-1 Call (Admin calling Customer)
+            const socketId = userSocketMap[userToCall];
+            if (socketId) {
+                io.to(socketId).emit("callUser", {
+                    signal: signalData,
+                    from,
+                    callerId: userId, // Mongo ID
+                    name,
+                    callLogId
+                });
+            } else {
+                io.to(socket.id).emit("callFailed", { reason: "User offline" });
+                try {
+                    const sendSystemMessage = require('./src/utils/sendSystemMessage');
+                    if (isAdmin) {
+                        await sendSystemMessage({ app }, userToCall, `You missed a call from support (${name}). 📞`, null);
+                    }
+                } catch (msgErr) { }
             }
         }
     });
 
-    // Global Active Calls State (In-Memory)
-    let activeVoiceCalls = []; // [{ id, caller, receiver, callerName, receiverName, startTime, admins: [] }]
+    // Voice Call Signaling Handlers Below
+
 
     // ...
 
     socket.on("answerCall", async (data) => {
-        const socketId = userSocketMap[data.to]; // data.to is Caller ID
+        const socketId = userSocketMap[data.to]; // data.to is Caller ID (Customer)
 
-        // Update Call Log to Ongoing
-        // We look for the most recent 'missed' call between these users
+        // NOTIFY OTHER ADMINS THAT CALL IS TAKEN
+        io.emit('callTaken', { callLogId: data.callLogId, answeredBy: userId });
+
         try {
-            // We need to know WHICH call. 
-            // Ideally client sends callLogId, but if not, we find recent one
             if (data.callLogId) {
-                await CallLog.findByIdAndUpdate(data.callLogId, { status: 'ongoing', startTime: new Date() });
+                // UPDATE RECEIVER TO THE ACTUAL ADMIN WHO ANSWERED
+                await CallLog.findByIdAndUpdate(data.callLogId, {
+                    status: 'ongoing',
+                    startTime: new Date(),
+                    receiver: userId // <--- CRITICAL FIX: Assign the call to this specific Admin
+                });
             } else {
-                // Fallback: Find recent missed call from 'data.to' (caller) to 'userId' (receiver/me)
+                // Fallback
                 const recentCall = await CallLog.findOne({
                     caller: data.to,
-                    receiver: userId,
+                    // receiver: userId, // Don't restrict to me, it might be assigned to 'ADMINS'
                     status: 'missed'
                 }).sort({ createdAt: -1 });
 
                 if (recentCall) {
                     recentCall.status = 'ongoing';
                     recentCall.startTime = new Date();
+                    recentCall.receiver = userId; // Assign to me
                     await recentCall.save();
+                    data.callLogId = recentCall._id; // Ensure we have ID for next steps
                 }
             }
         } catch (err) {
@@ -128,25 +180,32 @@ io.on('connection', (socket) => {
         }
 
         // Update Global Active Calls
-        // We need names. passed in data? No.
-        // We can fetch from DB calls if needed, OR just store IDs and let client resolve names if possible.
-        // But for speed, let's try to get names.
-        // Actually, 'callUser' event had names. 'answerCall' payload usually just has signal.
-        // We might need to enhance 'answerCall' to carry metadata or look up in `userSocketMap`/DB.
-
+        // Fetch fresh data with populated names
         let callDetails = null;
         if (data.callLogId) {
-            const call = await CallLog.findById(data.callLogId).populate('caller', 'name').populate('receiver', 'name');
-            if (call) {
-                activeVoiceCalls.push({
-                    callLogId: data.callLogId,
-                    caller: { id: call.caller._id, name: call.caller.name },
-                    receiver: { id: call.receiver._id, name: call.receiver.name },
-                    startTime: new Date()
-                });
-                io.emit('activeVoiceCalls', activeVoiceCalls);
-                callDetails = call;
-            }
+            try {
+                const call = await CallLog.findById(data.callLogId).populate('caller', 'name').populate('receiver', 'name');
+                if (call) {
+                    // Prevent Duplicates
+                    const existingIndex = activeVoiceCalls.findIndex(c => c.callLogId === data.callLogId);
+
+                    const callObj = {
+                        callLogId: data.callLogId,
+                        caller: { id: call.caller._id, name: call.caller.name },
+                        receiver: { id: call.receiver._id, name: call.receiver.name }, // Now this will be the specific Admin
+                        startTime: existingIndex !== -1 ? activeVoiceCalls[existingIndex].startTime : new Date()
+                    };
+
+                    if (existingIndex !== -1) {
+                        activeVoiceCalls[existingIndex] = callObj;
+                    } else {
+                        activeVoiceCalls.push(callObj);
+                    }
+
+                    io.emit('activeVoiceCalls', activeVoiceCalls);
+                    callDetails = call;
+                }
+            } catch (e) { console.error("Error populating active call:", e); }
         }
 
         if (socketId) {
@@ -155,13 +214,15 @@ io.on('connection', (socket) => {
     });
 
     socket.on("rejectCall", async (data) => {
-        const socketId = userSocketMap[data.to];
+        const socketId = userSocketMap[data.to]; // data.to is Customer
+        console.log(`[Socket] Call Rejected by ${userId} for ${data.to}`);
 
         try {
             // Update status to rejected
+            // We find the specific call log if possible, otherwise most recent ringing
             const recentCall = await CallLog.findOne({
                 caller: data.to,
-                receiver: userId,
+                // receiver: userId, // Don't restrict receiver if it was a broadcast
                 status: 'missed'
             }).sort({ createdAt: -1 });
 
@@ -169,8 +230,22 @@ io.on('connection', (socket) => {
                 recentCall.status = 'rejected';
                 await recentCall.save();
             }
+
+            // ROBUST CANCEL: Broadcast by Caller ID to ensure clients remove the item
+            // This covers cases where Call Log ID might be desynced or not needed
+            const onlineAdmins = await User.find({ isAdmin: true, isOnline: true });
+            onlineAdmins.forEach(admin => {
+                const adminSock = userSocketMap[admin._id.toString()];
+                if (adminSock) {
+                    io.to(adminSock).emit("callCancelled", {
+                        callLogId: recentCall?._id,
+                        callerId: data.to // The customer ID to remove from queue
+                    });
+                }
+            });
+
         } catch (err) {
-            console.error(err);
+            console.error("Error in rejectCall:", err);
         }
 
         if (socketId) {
@@ -179,44 +254,134 @@ io.on('connection', (socket) => {
     });
 
     socket.on("endCall", async (data) => {
-        const socketId = userSocketMap[data.to];
+        const userIdStr = userId.toString();
+        // console.log(`[Socket] EndCall received from ${userIdStr} target ${data.to}`);
 
+        let broadcastedCancel = false;
+
+        // 1. SURGICAL CANCELLATION (DB Based)
         try {
-            // Find the active ongoing call involving these two
-            // We don't know who is caller/receiver easily without ID, check both directions
-            const activeCall = await CallLog.findOne({
+            const ringingCall = await CallLog.findOne({
                 $or: [
-                    { caller: userId, receiver: data.to },
-                    { caller: data.to, receiver: userId }
+                    { caller: userId },
+                    { caller: data.to }
                 ],
-                status: 'ongoing'
+                status: 'missed'
             }).sort({ createdAt: -1 });
 
+            if (ringingCall && (new Date() - ringingCall.createdAt < 120000)) {
+                // Found the specific call!
+                ringingCall.status = 'cancelled';
+                await ringingCall.save();
+
+                // Broadcast specific CallLogID and the specific Caller
+                io.emit("callCancelled", {
+                    callLogId: ringingCall._id,
+                    callerId: ringingCall.caller
+                });
+                broadcastedCancel = true;
+                console.log(`[Socket] Surgically cancelled call ${ringingCall._id}`);
+            }
+        } catch (e) { console.error(e); }
+
+        // 2. LOGIC-BASED FALLBACK (If DB missing or slow)
+        if (!broadcastedCancel) {
+            console.log(`[Socket] No specific ringing call found. Exploring fallback.`);
+
+            try {
+                // Determine if 'userId' is Admin or Customer to know who to cancel
+                const user = await User.findById(userId);
+
+                if (user && user.isAdmin) {
+                    // Start of Rejection Logic: Admin rejected someone
+                    if (data.to) {
+                        io.emit("callCancelled", { callerId: data.to }); // Cancel the Customer
+                    }
+                } else {
+                    // Customer hanging up: Cancel Self
+                    io.emit("callCancelled", { callerId: userIdStr });
+                }
+            } catch (e) {
+                // Absolute safest fallback: valid ID wipe
+                io.emit("callCancelled", { callerId: userIdStr });
+            }
+        }
+
+        // 3. Find/Kill Active Call (Real-time state)
+        const activeCallIndex = activeVoiceCalls.findIndex(c =>
+            c.caller.id.toString() === userIdStr || c.receiver.id.toString() === userIdStr
+        );
+
+        if (activeCallIndex !== -1) {
+            const call = activeVoiceCalls[activeCallIndex];
+            const callerSock = userSocketMap[call.caller.id.toString()];
+            const receiverSock = userSocketMap[call.receiver.id.toString()];
+
+            console.log(`[Socket] Found active call to kill: ${call.caller.name} <-> ${call.receiver.name}`);
+
+            // KILL BOTH SIDES
+            if (callerSock) io.to(callerSock).emit("callEnded");
+            if (receiverSock) io.to(receiverSock).emit("callEnded");
+
+            // Remove from memory
+            activeVoiceCalls.splice(activeCallIndex, 1);
+
+            // Broadcast new list
+            io.emit('activeVoiceCalls', activeVoiceCalls);
+        } else {
+            console.log("[Socket] No active voice call found in memory for this user. Trying DB cleanup.");
+        }
+
+        // 3. DB Cleanup / Fallback
+        // Even if not in activeVoiceCalls (maybe sinking), ensure DB is updated
+        try {
+            // Find ONGOING or RINGING logic in DB
+            let activeCall = await CallLog.findOne({
+                $or: [
+                    { caller: userId },
+                    { receiver: userId },
+                    { caller: data.to },
+                    { receiver: data.to }
+                ],
+                status: { $in: ['ongoing', 'missed'] } // update missed too if found?
+            }).sort({ createdAt: -1 });
+
+            // If we found a relevant call that is 'active' (time threshold?)
             if (activeCall) {
-                activeCall.status = 'completed';
-                activeCall.endTime = new Date();
-                activeCall.duration = (activeCall.endTime - activeCall.startTime) / 1000;
-                await activeCall.save();
+                const isRecent = (new Date() - activeCall.createdAt) < 3600000; // 1 hour
+                if (activeCall.status === 'ongoing' && isRecent) {
+                    activeCall.status = 'completed';
+                    activeCall.endTime = new Date();
+                    activeCall.duration = (activeCall.endTime - activeCall.startTime) / 1000;
+                    await activeCall.save();
+                } else if (activeCall.status === 'missed' && isRecent) {
+                    activeCall.status = 'cancelled';
+                    await activeCall.save();
+                }
             }
         } catch (err) {
-            console.error(err);
+            console.error("Error in endCall DB cleanup:", err);
         }
 
-        // Remove from activeVoiceCalls
-        activeVoiceCalls = activeVoiceCalls.filter(c =>
-            !(c.caller.id.toString() === userId || c.caller.id.toString() === data.to) &&
-            !(c.receiver.id.toString() === userId || c.receiver.id.toString() === data.to)
-        );
+        // Just in case, broadcast active list again to be sure
         io.emit('activeVoiceCalls', activeVoiceCalls);
-
-        if (socketId) {
-            io.to(socketId).emit("callEnded");
-        }
     });
 
     // Clean up on disconnect
     socket.on('disconnect', async () => {
-        // ... existing disconnect logic ...
+        // Cleanup ringing calls from this user
+        if (userId) {
+            try {
+                // AGGRESSIVE CANCEL on Disconnect
+                io.emit("callCancelled", { callerId: userId });
+
+                const ringingCall = await CallLog.findOne({ caller: userId, status: 'missed' }).sort({ createdAt: -1 });
+                if (ringingCall && (new Date() - ringingCall.createdAt < 60000)) {
+                    ringingCall.status = 'cancelled';
+                    await ringingCall.save();
+                }
+            } catch (e) { }
+        }
 
         // Cleanup active calls involving this user
         const initialLength = activeVoiceCalls.length;
@@ -224,12 +389,8 @@ io.on('connection', (socket) => {
         if (activeVoiceCalls.length !== initialLength) {
             io.emit('activeVoiceCalls', activeVoiceCalls);
         }
-    });
-    // ----------------------------
 
-    socket.on('disconnect', async () => {
-        // console.log('user disconnected', socket.id);
-
+        // Online status update
         if (userId && userSocketMap[userId] === socket.id) {
             delete userSocketMap[userId];
             await User.findByIdAndUpdate(userId, { isOnline: false, lastSeen: new Date() });

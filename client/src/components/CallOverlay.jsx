@@ -77,10 +77,11 @@ const CallOverlay = () => {
 
     const totalActivity = incomingCalls.length + allActiveCalls.length;
 
-    // We only show the Dashboard/MiniFab if there is activity (Incoming or Active)
-    // The Dashboard is for Queue & Monitoring.
+    // ADMIN LOGIC: Show Dashboard for Queue & Monitoring
+    const showAdminDashboard = userInfo?.isAdmin && (incomingCalls.length > 0 || allActiveCalls.length > 0);
 
-    const showDashboard = (incomingCalls.length > 0 || (userInfo?.isAdmin && allActiveCalls.length > 0));
+    // CUSTOMER LOGIC: Show simple Incoming Call Modal
+    const showCustomerIncoming = !userInfo?.isAdmin && incomingCalls.length > 0;
 
     // My personal active call UI (Floating Bottom Right)
     const myActiveCallUI = (callStatus === 'calling' || callStatus === 'connected');
@@ -90,175 +91,257 @@ const CallOverlay = () => {
 
     return (
         <>
-            {/* FLOATING FAB (When Minimized) */}
-            <AnimatePresence>
-                {!isExpanded && showDashboard && (
-                    <motion.button
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                        onClick={() => setIsExpanded(true)}
-                        className="fixed bottom-6 left-6 z-[9990] w-14 h-14 bg-slate-900 border border-slate-700 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 transition-transform group"
-                    >
-                        {incomingCalls.length > 0 ? (
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-20"></span>
-                        ) : null}
-
-                        <div className="relative">
-                            <FiLayers size={24} className={incomingCalls.length > 0 ? "text-red-500" : "text-primary"} />
-                            {totalActivity > 0 && (
-                                <span className={`absolute -top-3 -right-3 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${incomingCalls.length > 0 ? 'bg-red-500 text-white' : 'bg-slate-700 text-slate-300'}`}>
-                                    {totalActivity}
-                                </span>
-                            )}
-                        </div>
-                        {/* Tooltip */}
-                        <span className="absolute left-16 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            Call Center ({incomingCalls.length} Waiting)
-                        </span>
-                    </motion.button>
-                )}
-            </AnimatePresence>
-
-            {/* EXPANDED DASHBOARD (Incoming Queue + Active Monitor) */}
-            <AnimatePresence>
-                {isExpanded && showDashboard && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-                    >
-                        {/* Click outside usually handles close but let's force button usage for clarity */}
-                        <div className="bg-slate-900 border border-slate-700 rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] relative text-left">
-
-                            {/* Close Button */}
-                            <button
-                                onClick={() => setIsExpanded(false)}
-                                className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all z-10"
+            {/* --- ADMIN VIEW: DASHBOARD FAB & EXPANDED UI --- */}
+            {userInfo?.isAdmin && (
+                <>
+                    {/* FLOATING FAB (When Minimized) */}
+                    <AnimatePresence>
+                        {!isExpanded && showAdminDashboard && (
+                            <motion.button
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                exit={{ scale: 0 }}
+                                onClick={() => setIsExpanded(true)}
+                                className="fixed bottom-6 left-6 z-[9990] w-14 h-14 bg-slate-900 border border-slate-700 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 transition-transform group"
                             >
-                                <FiX size={20} />
-                            </button>
+                                {incomingCalls.length > 0 ? (
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-20"></span>
+                                ) : null}
 
-                            {/* Header */}
-                            <div className="p-6 pb-4 border-b border-slate-800 bg-slate-900/50">
-                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                    <FiHeadphones className="text-primary" />
-                                    Support Dashboard
-                                </h2>
-                                <p className="text-slate-400 text-sm mt-1">
-                                    {incomingCalls.length} Incoming • {allActiveCalls.length} Active
-                                </p>
+                                <div className="relative">
+                                    <FiLayers size={24} className={incomingCalls.length > 0 ? "text-red-500" : "text-primary"} />
+                                    {totalActivity > 0 && (
+                                        <span className={`absolute -top-3 -right-3 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${incomingCalls.length > 0 ? 'bg-red-500 text-white' : 'bg-slate-700 text-slate-300'}`}>
+                                            {totalActivity}
+                                        </span>
+                                    )}
+                                </div>
+                                {/* Tooltip */}
+                                <span className="absolute left-16 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                    Call Center ({incomingCalls.length} Waiting)
+                                </span>
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
+
+                    {/* EXPANDED DASHBOARD (Incoming Queue + Active Monitor) */}
+                    <AnimatePresence>
+                        {isExpanded && showAdminDashboard && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md md:p-4"
+                            >
+                                {/* Modal Container - Full screen mobile, centered card desktop */}
+                                <div className="bg-slate-900 md:border border-slate-700 w-full h-full md:h-auto md:max-h-[85vh] md:max-w-2xl md:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col relative text-left">
+
+                                    {/* Close Button */}
+                                    {/* Header */}
+                                    <div className="p-4 md:p-6 pb-4 border-b border-slate-800 bg-slate-900 z-10 shrink-0 relative">
+                                        <button
+                                            onClick={() => setIsExpanded(false)}
+                                            className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all z-50 border border-slate-700 md:border-transparent"
+                                            title="Minimize Dashboard"
+                                        >
+                                            <FiX size={20} />
+                                        </button>
+
+                                        <div className="flex items-center gap-3 mb-2 pr-10">
+                                            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-primary">
+                                                <FiHeadphones size={20} />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-lg md:text-xl font-bold text-white leading-tight">
+                                                    Support Dashboard
+                                                </h2>
+                                                <p className="text-slate-400 text-xs">
+                                                    Manage call queues and active sessions
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Stats Row */}
+                                        <div className="flex gap-4 mt-4 text-sm font-medium">
+                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${incomingCalls.length > 0 ? 'bg-red-500/10 text-red-500' : 'bg-slate-800 text-slate-500'}`}>
+                                                <div className={`w-2 h-2 rounded-full ${incomingCalls.length > 0 ? 'bg-red-500 animate-pulse' : 'bg-slate-600'}`}></div>
+                                                <span>{incomingCalls.length} Waiting</span>
+                                            </div>
+                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${allActiveCalls.length > 0 ? 'bg-blue-500/10 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
+                                                <div className={`w-2 h-2 rounded-full ${allActiveCalls.length > 0 ? 'bg-blue-500' : 'bg-slate-600'}`}></div>
+                                                <span>{allActiveCalls.length} Active</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="overflow-y-auto p-4 custom-scrollbar space-y-6">
+
+                                        {/* SECTION 1: INCOMING CALLS */}
+                                        {incomingCalls.length > 0 && (
+                                            <div className="animate-in slide-in-from-bottom-5 duration-300">
+                                                <div className="flex items-center justify-between mb-3 sticky top-0 bg-slate-900/95 backdrop-blur py-2 z-10 border-b border-slate-800/50">
+                                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                        Incoming Queue
+                                                    </h3>
+                                                    <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold">{incomingCalls.length}</span>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {incomingCalls.map((call) => (
+                                                        <div key={call.callLogId} className="bg-slate-800/60 hover:bg-slate-800 transition-colors rounded-xl p-3 md:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-red-500/10 hover:border-red-500/30 group">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 flex items-center justify-center text-lg font-bold text-white shrink-0">
+                                                                    {call.name.charAt(0)}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <h4 className="text-white font-bold truncate">{call.name}</h4>
+                                                                        {call.isAdmin && <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded border border-primary/20">ADMIN</span>}
+                                                                    </div>
+                                                                    <p className="text-xs text-slate-400 truncate">Wait time: <span className="text-slate-300 font-mono">00:00</span></p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-2 sm:self-center self-end w-full sm:w-auto">
+                                                                <button
+                                                                    onClick={() => rejectCall(call.callLogId)}
+                                                                    className="flex-1 sm:flex-none py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors font-medium text-sm"
+                                                                >
+                                                                    Skip
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => answerCall(call)}
+                                                                    disabled={isLineBusy}
+                                                                    className={`flex-1 sm:flex-none py-2.5 px-6 rounded-lg font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all ${isLineBusy
+                                                                        ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                                                                        : 'bg-green-500 hover:bg-green-600 text-white shadow-green-500/20 active:scale-95'
+                                                                        }`}
+                                                                >
+                                                                    <FiPhone className={isLineBusy ? "" : "animate-pulse"} /> Answer
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* SECTION 2: ACTIVE CALLS (Monitor) - Admin Only */}
+                                        {allActiveCalls.length > 0 && (
+                                            <div className="animate-in slide-in-from-bottom-5 duration-300 delay-100">
+                                                <div className="flex items-center justify-between mb-3 sticky top-0 bg-slate-900/95 backdrop-blur py-2 z-10 border-b border-slate-800/50">
+                                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                        Active Sessions
+                                                    </h3>
+                                                    <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold">{allActiveCalls.length}</span>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {allActiveCalls.map((call) => {
+                                                        const isMySide = call.caller.id === userInfo._id || call.receiver.id === userInfo._id;
+                                                        const peerId = call.caller.id === userInfo._id ? call.receiver.id : call.caller.id;
+
+                                                        return (
+                                                            <div key={call.callLogId} className={`bg-slate-800/40 rounded-xl p-4 border flex flex-col gap-3 ${isMySide ? 'border-primary/30 bg-primary/5' : 'border-slate-700'}`}>
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-2 text-sm text-slate-300">
+                                                                        <span className="font-bold text-white">{call.caller?.name}</span>
+                                                                        <span className="text-slate-600">to</span>
+                                                                        <span className="font-bold text-white">{call.receiver?.name}</span>
+                                                                    </div>
+                                                                    {isMySide && <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">You</span>}
+                                                                </div>
+
+                                                                <div className="flex items-center justify-between bg-slate-900/50 rounded-lg p-2">
+                                                                    <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+                                                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                                                        {call.startTime ? <CallDuration startTime={call.startTime} /> : 'Connecting...'}
+                                                                    </div>
+
+                                                                    {isMySide && (
+                                                                        <button
+                                                                            onClick={() => leaveCall(peerId)}
+                                                                            className="p-1.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded transition-colors"
+                                                                            title="End Call"
+                                                                        >
+                                                                            <FiPhoneOff size={14} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {incomingCalls.length === 0 && allActiveCalls.length === 0 && (
+                                            <div className="flex flex-col items-center justify-center py-20 text-slate-600">
+                                                <div className="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center mb-4">
+                                                    <FiHeadphones size={24} />
+                                                </div>
+                                                <p className="font-medium text-slate-500">All caught up!</p>
+                                                <p className="text-sm">No active calls or waiting queue.</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Footer / Status Bar */}
+                                    <div className="p-3 bg-slate-900 border-t border-slate-800 text-center text-[10px] text-slate-500">
+                                        System Status: <span className="text-green-500">Online</span> • {new Date().toLocaleTimeString()}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </>
+            )}
+
+            {/* --- CUSTOMER VIEW: INCOMING CALL MODAL --- */}
+            <AnimatePresence>
+                {showCustomerIncoming && incomingCalls.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+                    >
+                        <div className="bg-slate-900 border border-slate-700 rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden flex flex-col items-center p-8 text-center relative">
+                            {/* Pulse Effect */}
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent animate-pulse"></div>
+
+                            {/* Avatar */}
+                            <div className="w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 flex items-center justify-center mb-6 relative">
+                                <FiHeadphones size={40} className="text-primary" />
+                                <div className="absolute inset-0 rounded-full border-2 border-primary animate-ping opacity-20"></div>
                             </div>
 
-                            <div className="overflow-y-auto p-4 custom-scrollbar space-y-6">
+                            <h2 className="text-2xl font-bold text-white mb-1">{incomingCalls[0].name}</h2>
+                            <p className={`font-bold text-xs uppercase tracking-widest mb-8 ${incomingCalls[0].isAdmin ? 'text-primary' : 'text-slate-400'}`}>
+                                Incoming {incomingCalls[0].isAdmin ? 'Administrator' : 'Customer'} Call
+                            </p>
 
-                                {/* SECTION 1: INCOMING CALLS */}
-                                {incomingCalls.length > 0 && (
-                                    <div>
-                                        <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                                            Incoming Queue
-                                        </h3>
-                                        <div className="space-y-3">
-                                            {incomingCalls.map((call) => (
-                                                <div key={call.callLogId} className="bg-slate-800/80 rounded-xl p-4 flex items-center justify-between border border-red-500/20 shadow-lg shadow-red-900/10">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 font-bold">
-                                                            {call.name.charAt(0)}
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="text-white font-bold">{call.name}</h4>
-                                                            <span className="text-xs text-slate-400 block text-left">{call.isAdmin ? 'Admin' : 'Customer'}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => answerCall(call)}
-                                                            disabled={isLineBusy}
-                                                            className={`px-4 py-2 text-white rounded-lg font-bold text-sm shadow-lg transition-all flex items-center gap-2 ${isLineBusy
-                                                                ? 'bg-slate-600 text-slate-400 cursor-not-allowed opacity-50'
-                                                                : 'bg-green-500 hover:bg-green-600 shadow-green-500/20'
-                                                                }`}
-                                                            title={isLineBusy ? "Finish current call first" : "Answer Call"}
-                                                        >
-                                                            <FiPhone size={16} /> Answer
-                                                        </button>
-                                                        <button
-                                                            onClick={() => rejectCall(call.callLogId)}
-                                                            className="p-2 bg-slate-700 hover:bg-red-500/80 text-slate-300 hover:text-white rounded-lg transition-all"
-                                                            title="Reject"
-                                                        >
-                                                            <FiPhoneOff size={16} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                            <div className="flex items-center gap-6 w-full justify-center">
+                                {/* Reject Button */}
+                                <button
+                                    onClick={() => rejectCall(incomingCalls[0].callLogId)}
+                                    className="flex flex-col items-center gap-2 group"
+                                >
+                                    <div className="w-14 h-14 rounded-full bg-red-500/20 text-red-500 group-hover:bg-red-500 group-hover:text-white flex items-center justify-center transition-all shadow-lg border border-red-500/50">
+                                        <FiPhoneOff size={24} />
                                     </div>
-                                )}
+                                    <span className="text-xs text-slate-400 group-hover:text-white">Decline</span>
+                                </button>
 
-                                {/* SECTION 2: ACTIVE CALLS (Monitor) - Admin Only */}
-                                {userInfo?.isAdmin && allActiveCalls.length > 0 && (
-                                    <div>
-                                        <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                                            Ongoing Calls
-                                        </h3>
-                                        <div className="space-y-2">
-                                            {allActiveCalls.map((call) => {
-                                                // Check if this is local user's call to show 'Hangup'
-                                                const isMySide = call.caller.id === userInfo._id || call.receiver.id === userInfo._id;
-                                                const peerId = call.caller.id === userInfo._id ? call.receiver.id : call.caller.id;
-
-                                                return (
-                                                    <div key={call.callLogId} className="bg-slate-800/40 rounded-xl p-3 flex items-center justify-between border border-slate-700">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400">
-                                                                <FiActivity size={12} />
-                                                            </div>
-                                                            <div className="flex flex-col text-left">
-                                                                <span className="text-slate-300 text-sm font-medium">
-                                                                    <span className="text-white font-bold">{call.caller?.name}</span>
-                                                                    <span className="mx-1 text-slate-500">↔</span>
-                                                                    <span className="text-white font-bold">{call.receiver?.name}</span>
-                                                                </span>
-                                                                <span className="text-[10px] text-slate-500 flex items-center gap-2">
-                                                                    <span>Connected</span>
-                                                                    {isMySide && <span className="text-green-500 font-bold">(Me)</span>}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-3">
-                                                            {call.startTime && (
-                                                                <div className="text-xs font-mono text-slate-400 bg-slate-900/50 px-2 py-1 rounded border border-slate-700 h-8 flex items-center justify-center min-w-[3rem]">
-                                                                    <CallDuration startTime={call.startTime} />
-                                                                </div>
-                                                            )}
-
-                                                            {isMySide && (
-                                                                <button
-                                                                    onClick={() => leaveCall(peerId)}
-                                                                    className="w-8 h-8 rounded-full bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white flex items-center justify-center transition-colors shadow-lg shadow-red-500/10"
-                                                                    title="End Call"
-                                                                >
-                                                                    <FiPhoneOff size={14} />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )
-                                            })}
-                                        </div>
+                                {/* Answer Button */}
+                                <button
+                                    onClick={() => answerCall(incomingCalls[0])}
+                                    className="flex flex-col items-center gap-2 group"
+                                >
+                                    <div className="w-16 h-16 rounded-full bg-green-500 text-white flex items-center justify-center transition-all shadow-lg shadow-green-500/40 animate-bounce-slow border-4 border-green-500/30">
+                                        <FiPhone size={28} />
                                     </div>
-                                )}
-
-                                {incomingCalls.length === 0 && (!userInfo?.isAdmin || allActiveCalls.length === 0) && (
-                                    <div className="text-center py-10 text-slate-500">
-                                        <p>No active call activity.</p>
-                                    </div>
-                                )}
+                                    <span className="text-xs text-white font-bold">Answer</span>
+                                </button>
                             </div>
                         </div>
                     </motion.div>
@@ -273,7 +356,7 @@ const CallOverlay = () => {
                     exit={{ y: 100, opacity: 0 }}
                     drag
                     dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                    className="fixed bottom-6 right-6 z-[9999] bg-slate-900 border border-slate-700 rounded-[2rem] shadow-2xl p-6 w-80 overflow-hidden cursor-grab active:cursor-grabbing text-left"
+                    className="fixed bottom-6 right-6 z-[10000] bg-slate-900 border border-slate-700 rounded-[2rem] shadow-2xl p-6 w-80 overflow-hidden cursor-grab active:cursor-grabbing text-left"
                 >
                     {/* Audio Element */}
                     <audio ref={audioRef} className="hidden" />
@@ -284,13 +367,15 @@ const CallOverlay = () => {
                             <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-900"></div>
                         </div>
                         <div>
-                            <h3 className="text-white font-bold text-sm leading-tight">{callData?.name || 'Calling...'}</h3>
+                            <h3 className="text-white font-bold text-sm leading-tight text-left">
+                                {callStatus === 'calling' ? 'Calling...' : (callData?.name || 'Unknown')}
+                            </h3>
                             {callData && (
-                                <span className={`text-[9px] font-bold uppercase tracking-wide block mb-0.5 ${callData.isAdmin ? 'text-primary' : 'text-slate-500'}`}>
+                                <span className={`text-[9px] font-bold uppercase tracking-wide block mb-0.5 text-left ${callData.isAdmin ? 'text-primary' : 'text-slate-500'}`}>
                                     {callData.isAdmin ? 'Administrator' : 'Customer'}
                                 </span>
                             )}
-                            <p className="text-xs text-slate-400 font-mono">
+                            <p className="text-xs text-slate-400 font-mono text-left">
                                 {callStatus === 'calling' ? 'Connecting...' : formatTime(callDuration)}
                             </p>
                         </div>

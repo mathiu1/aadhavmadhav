@@ -9,10 +9,11 @@ import api from '../api/axios';
 const initialState = {
     userInfo: null,
     isLoading: false,
+    appLoading: true, // New: Track initial auth check
     error: null,
 };
 
-export const login = createAsyncThunk('auth/login', async ({ email, password }, thunkAPI) => {
+export const login = createAsyncThunk('auth/login', async ({ email, password, forceLogin = false }, thunkAPI) => {
     try {
         const config = {
             headers: {
@@ -20,11 +21,19 @@ export const login = createAsyncThunk('auth/login', async ({ email, password }, 
             },
             withCredentials: true, // Important for cookies
         };
-        const { data } = await api.post('/users/login', { email, password }, config);
+        const { data } = await api.post('/users/login', { email, password, forceLogin }, config);
         // localStorage.setItem('userInfo', JSON.stringify(data));
         return data;
     } catch (error) {
         const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+        // Return structured error if possible for 403 handling
+        if (error.response && error.response.status === 403) {
+            return thunkAPI.rejectWithValue({
+                message,
+                status: 403,
+                deviceInfo: error.response.data.deviceInfo // <--- Added this
+            });
+        }
         return thunkAPI.rejectWithValue(message);
     }
 });
@@ -108,11 +117,16 @@ const authSlice = createSlice({
                 state.isLoading = false;
                 state.error = action.payload;
             })
+            .addCase(checkAuth.pending, (state) => {
+                state.appLoading = true;
+            })
             .addCase(checkAuth.fulfilled, (state, action) => {
                 state.userInfo = action.payload; // Restore session
+                state.appLoading = false;
             })
             .addCase(checkAuth.rejected, (state) => {
                 state.userInfo = null; // Ensure logged out if check fails
+                state.appLoading = false;
             })
             .addCase(toggleFavorite.fulfilled, (state, action) => {
                 if (state.userInfo) {

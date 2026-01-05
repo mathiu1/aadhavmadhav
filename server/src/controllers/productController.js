@@ -56,7 +56,8 @@ const getProducts = asyncHandler(async (req, res) => {
     const count = await Product.countDocuments({ ...keyword, ...category, ...priceFilter, ...ratingFilter, ...isDeletedFilter });
     const products = await Product.find({ ...keyword, ...category, ...priceFilter, ...ratingFilter, ...isDeletedFilter })
         .limit(pageSize)
-        .skip(pageSize * (page - 1));
+        .skip(pageSize * (page - 1))
+        .lean();
 
     // Append delivered order count to each product
     const productsWithStats = await Promise.all(products.map(async (product) => {
@@ -64,7 +65,7 @@ const getProducts = asyncHandler(async (req, res) => {
             'orderItems.product': product._id,
             status: 'Delivered'
         });
-        return { ...product.toObject(), deliveredOrderCount };
+        return { ...product, deliveredOrderCount };
     }));
 
     res.json({ products: productsWithStats, page, pages: Math.ceil(count / pageSize) });

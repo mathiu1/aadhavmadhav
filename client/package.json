@@ -33,6 +33,7 @@
     "simple-peer": "^9.11.1",
     "socket.io-client": "^4.8.3",
     "stream-browserify": "^3.0.0",
+    "sweetalert2": "^11.26.17",
     "tailwind-merge": "^3.4.0",
     "util": "^0.12.5",
     "vite-plugin-node-polyfills": "^0.24.0",

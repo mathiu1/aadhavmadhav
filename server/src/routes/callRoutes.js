@@ -49,17 +49,50 @@ router.put('/:id', protect, async (req, res) => {
 // @access  Private/Admin
 router.get('/', protect, admin, async (req, res) => {
     try {
-        const pageSize = 20;
+        const pageSize = Number(req.query.pageSize) || 10;
         const page = Number(req.query.pageNumber) || 1;
+        const status = req.query.status;
+        const filterDate = req.query.filterDate;
+        const customStartDate = req.query.startDate;
+        const customEndDate = req.query.endDate;
 
-        const count = await CallLog.countDocuments({});
-        const calls = await CallLog.find({})
+        let query = {};
+
+        // Status Filter
+        if (status && status !== 'all') {
+            query.status = status;
+        }
+
+        // Date Filter
+        const now = new Date();
+        if (filterDate === 'today') {
+            const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+            query.createdAt = { $gte: startOfDay, $lte: endOfDay };
+        } else if (filterDate === 'week') {
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+            startOfWeek.setHours(0, 0, 0, 0);
+            query.createdAt = { $gte: startOfWeek };
+        } else if (filterDate === 'month') {
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            query.createdAt = { $gte: startOfMonth };
+        } else if (filterDate === 'custom' && customStartDate && customEndDate) {
+            const start = new Date(customStartDate);
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999); // Include the entire end day
+            query.createdAt = { $gte: start, $lte: end };
+        }
+
+        const count = await CallLog.countDocuments(query);
+        const calls = await CallLog.find(query)
             .populate('caller', 'name email isAdmin')
-            .populate('receiver', 'name email isAdmin') // Added receiver population
+            .populate('receiver', 'name email isAdmin')
             .populate('answeredBy', 'name email')
             .sort({ createdAt: -1 })
             .limit(pageSize)
-            .skip(pageSize * (page - 1));
+            .skip(pageSize * (page - 1))
+            .lean();
 
         res.json({ calls, page, pages: Math.ceil(count / pageSize), count });
     } catch (error) {

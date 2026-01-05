@@ -126,7 +126,8 @@ io.on('connection', (socket) => {
                     from,
                     callerId: userId, // Mongo ID
                     name,
-                    callLogId
+                    callLogId,
+                    isAdmin // <--- Added this field
                 });
             } else {
                 io.to(socket.id).emit("callFailed", { reason: "User offline" });
@@ -144,6 +145,14 @@ io.on('connection', (socket) => {
 
 
     // ...
+
+    socket.on("iceCandidate", (data) => {
+        // Exchange ICE candidates for Trickle ICE (Faster Connections)
+        const socketId = userSocketMap[data.to];
+        if (socketId) {
+            io.to(socketId).emit("iceCandidate", { from: data.from, signal: data.signal });
+        }
+    });
 
     socket.on("answerCall", async (data) => {
         const socketId = userSocketMap[data.to]; // data.to is Caller ID (Customer)
@@ -400,6 +409,9 @@ io.on('connection', (socket) => {
 });
 
 // Middleware
+const compression = require('compression');
+
+app.use(compression()); // Compress all responses
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
@@ -415,7 +427,7 @@ app.get('/api/ping', (req, res) => {
     res.send('API is running...');
 });
 
-//require("./ping.js");
+
 
 app.use('/api/users', require('./src/routes/userRoutes'));
 app.use('/api/products', require('./src/routes/productRoutes'));
@@ -431,7 +443,10 @@ app.use('/api/calls', require('./src/routes/callRoutes'));
 
 
 if (process.env.NODE_ENV === "production") {
-    app.use(express.static(path.join(__dirname, "../client/dist")));
+    app.use(express.static(path.join(__dirname, "../client/dist"), {
+        maxAge: '1d', // Cache static assets for 1 day
+        etag: false
+    }));
 
 
     app.get(/.*/, (req, res) => {

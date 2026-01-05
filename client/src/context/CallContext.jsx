@@ -87,7 +87,7 @@ export const CallContextProvider = ({ children }) => {
         socket.on('callAccepted', (signal) => {
             setCallStatus('connected');
             connectionRef.current.signal(signal);
-            startTimer();
+            // Timer starts only when peer fully connects
         });
 
         socket.on('callRejected', () => {
@@ -101,21 +101,26 @@ export const CallContextProvider = ({ children }) => {
             leaveCall();
         });
 
-        socket.on('callTaken', ({ callLogId }) => {
+        socket.on('callTaken', ({ callLogId, answeredBy }) => {
             // Another admin answered this call
             setIncomingCalls(prev => {
                 const updated = prev.filter(c => c.callLogId !== callLogId);
                 return updated;
             });
 
-            // If we were looking at this call as the main one
-            setCallData(current => {
-                if (current?.callLogId === callLogId) {
-                    setCallStatus('idle');
-                    return null;
-                }
-                return current;
-            });
+            // If I am currently trying to answer this SAME call, or looking at it?
+            // If I am the one who answered, 'answeredBy' should be ME.
+            // If answeredBy === userInfo._id, DO NOT RESET.
+            if (answeredBy !== userInfo._id) {
+                setCallData(current => {
+                    if (current?.callLogId === callLogId) {
+                        setCallStatus('idle'); // Stop my attempt if someone else took it
+                        toast("Call taken by another agent");
+                        return null;
+                    }
+                    return current;
+                });
+            }
         });
 
         socket.on('callCancelled', ({ callLogId, callerId }) => {
@@ -149,6 +154,13 @@ export const CallContextProvider = ({ children }) => {
             });
         });
 
+        socket.on('iceCandidate', ({ signal }) => {
+            // Feed incoming candidate to the peer connection
+            if (connectionRef.current) {
+                connectionRef.current.signal(signal);
+            }
+        });
+
         return () => {
             socket.off('callUser');
             socket.off('callAccepted');
@@ -156,6 +168,7 @@ export const CallContextProvider = ({ children }) => {
             socket.off('callEnded');
             socket.off('callTaken');
             socket.off('callCancelled');
+            socket.off('iceCandidate');
         };
     }, [socket]);
 
@@ -206,7 +219,7 @@ export const CallContextProvider = ({ children }) => {
         }
     };
 
-    const initiateCall = (idToCall) => {
+    const initiateCall = (idToCall, nameToCall = 'Unknown', roleToCall = 'Customer') => {
         if (callStatus !== 'idle') {
             toast.error("You are already in a call");
             return;
@@ -214,7 +227,11 @@ export const CallContextProvider = ({ children }) => {
 
         setCallStatus('calling');
         // Set callData for the caller so they know who to disconnect from
-        setCallData({ from: idToCall, name: 'Calling...' });
+        setCallData({
+            from: idToCall,
+            name: nameToCall,
+            isAdmin: roleToCall === 'Administrator' || roleToCall === true // Normalize if boolean passed
+        });
 
         navigator.mediaDevices.getUserMedia({
             video: false,
@@ -234,7 +251,7 @@ export const CallContextProvider = ({ children }) => {
 
                 const peer = new SimplePeer({
                     initiator: true,
-                    trickle: false,
+                    trickle: true, // Enable Trickle
                     stream: currentStream,
                     config: {
                         iceServers: [
@@ -246,17 +263,32 @@ export const CallContextProvider = ({ children }) => {
                 });
 
                 peer.on('signal', (data) => {
-                    socket.emit('callUser', {
-                        userToCall: idToCall,
-                        signalData: data,
-                        from: userInfo._id,
-                        name: userInfo.name,
-                        isAdmin: userInfo.isAdmin // Pass role to receiver
-                    });
+                    if (data.type === 'offer') {
+                        // Initial Call Setup
+                        socket.emit('callUser', {
+                            userToCall: idToCall,
+                            signalData: data,
+                            from: userInfo._id,
+                            name: userInfo.name,
+                            isAdmin: userInfo.isAdmin
+                        });
+                    } else if (data.candidate) {
+                        // Trickle Candidate: Send separately
+                        socket.emit('iceCandidate', {
+                            to: idToCall,
+                            signal: data,
+                            from: userInfo._id
+                        });
+                    }
                 });
 
                 peer.on('stream', (currentRemoteStream) => {
                     setRemoteStream(currentRemoteStream);
+                });
+
+                peer.on('connect', () => {
+                    startTimer();
+                    toast.success("Call Connected!");
                 });
 
                 socket.on('callFailed', ({ reason }) => {
@@ -300,7 +332,7 @@ export const CallContextProvider = ({ children }) => {
         setIncomingCalls(prev => prev.filter(c => c.callLogId !== callToAnswer.callLogId));
 
         setCallStatus('connected');
-        startTimer();
+        // Timer waits for peer 'connect' event
 
         // Ensure we are not sending 'answerCall' to ourselves if the bug persists,
         // but typically 'callData.from' is the Caller's ID.
@@ -324,7 +356,7 @@ export const CallContextProvider = ({ children }) => {
 
                 const peer = new SimplePeer({
                     initiator: false,
-                    trickle: false,
+                    trickle: true, // Enable Trickle
                     stream: currentStream,
                     config: {
                         iceServers: [
@@ -336,18 +368,50 @@ export const CallContextProvider = ({ children }) => {
                 });
 
                 peer.on('signal', (data) => {
-                    socket.emit('answerCall', {
-                        signal: data,
-                        to: callToAnswer.from, // Use captured ref
-                        callLogId: callToAnswer.callLogId
-                    });
+                    if (data.type === 'answer') {
+                        // Initial Answer
+                        socket.emit('answerCall', {
+                            signal: data,
+                            to: callToAnswer.from,
+                            callLogId: callToAnswer.callLogId
+                        });
+                    } else if (data.candidate) {
+                        // Trickle Candidate
+                        socket.emit('iceCandidate', {
+                            to: callToAnswer.from,
+                            signal: data,
+                            from: userInfo._id
+                        });
+                    }
                 });
 
                 peer.on('stream', (currentRemoteStream) => {
                     setRemoteStream(currentRemoteStream);
                 });
 
-                peer.signal(callToAnswer.signal);
+                peer.on('connect', () => {
+                    startTimer();
+                });
+
+                peer.on('error', (err) => {
+                    console.error("Peer Error:", err);
+                    toast.error("Connection error: " + (err.message || "Unknown"));
+                    leaveCall();
+                });
+
+                try {
+                    if (callToAnswer.signal) {
+                        peer.signal(callToAnswer.signal);
+                    } else {
+                        throw new Error("Invalid call signal");
+                    }
+                } catch (e) {
+                    console.error("Signaling Error:", e);
+                    toast.error("Call failed: Invalid signal");
+                    leaveCall();
+                    return;
+                }
+
                 connectionRef.current = peer;
             })
             .catch(err => {

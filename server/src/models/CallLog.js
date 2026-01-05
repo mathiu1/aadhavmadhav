@@ -43,6 +43,12 @@ const callLogSchema = mongoose.Schema({
     timestamps: true,
 });
 
+// Indexes for performance
+callLogSchema.index({ createdAt: -1 });
+callLogSchema.index({ status: 1 });
+callLogSchema.index({ caller: 1 });
+callLogSchema.index({ receiver: 1 });
+
 const CallLog = mongoose.model('CallLog', callLogSchema);
 
 module.exports = CallLog;

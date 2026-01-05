@@ -25,6 +25,15 @@ const userSchema = mongoose.Schema(
             type: Boolean,
             default: false
         },
+        lastDeviceInfo: {
+            ip: { type: String },
+            device: { type: String }, // User Agent or parsed name
+            loginTime: { type: Date }
+        },
+        tokenVersion: {
+            type: Number,
+            default: 0
+        },
         lastSeen: {
             type: Date,
             default: Date.now

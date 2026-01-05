@@ -94,5 +94,13 @@ const productSchema = mongoose.Schema(
 // Pre-save hook to calculate discount or old price if one is missing but needed? 
 // For now, allow manual entry.
 
+// Product Indexes for fast search & filtering
+productSchema.index({ name: 'text', description: 'text' }); // Text index for keyword search
+productSchema.index({ category: 1 });
+productSchema.index({ price: 1 });
+productSchema.index({ rating: -1 });
+productSchema.index({ createdAt: -1 });
+productSchema.index({ isDeleted: 1 });
+
 const Product = mongoose.model('Product', productSchema);
 module.exports = Product;

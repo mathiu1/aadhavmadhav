@@ -208,11 +208,11 @@ const ChatWindow = ({ conversationUserId, title, onClose, isWidget = false, isOp
                     <div className="flex items-center gap-1 md:gap-3">
                         {conversationUserId && (
                             <button
-                                onClick={() => initiateCall(conversationUserId)}
+                                onClick={() => initiateCall(conversationUserId, title, 'Customer')}
                                 disabled={callStatus !== 'idle'}
                                 className={`p-2 md:p-2.5 rounded-xl transition-all duration-300 transform shadow-lg ${callStatus !== 'idle'
-                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                        : 'bg-primary/10 text-primary hover:bg-primary hover:text-white hover:scale-105 active:scale-95 shadow-purple-500/20'
+                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                    : 'bg-primary/10 text-primary hover:bg-primary hover:text-white hover:scale-105 active:scale-95 shadow-purple-500/20'
                                     }`}
                                 title={callStatus !== 'idle' ? "Call in progress" : "Start Voice Call"}
                             >

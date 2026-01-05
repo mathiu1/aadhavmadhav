@@ -5,6 +5,7 @@ import { login, clearError } from '../slices/authSlice';
 import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaSpinner } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
@@ -34,7 +35,78 @@ const LoginPage = () => {
             await dispatch(login({ email, password })).unwrap();
             toast.success('Welcome back!');
         } catch (err) {
-            toast.error(err || 'Failed to login');
+            // Check if it's the 403 Concurrent Login Error
+            if (err?.status === 403 || (typeof err === 'string' && err.includes('already logged in'))) {
+                const devInfo = err?.deviceInfo || { ip: 'Unknown', device: 'Unknown' };
+
+                // Parse User Agent for friendlier display
+                const ua = (devInfo.device || '').toLowerCase();
+                let deviceName = "Unknown Device";
+                if (ua.includes('windows')) deviceName = "Windows PC 💻";
+                else if (ua.includes('mac')) deviceName = "Mac 🍎";
+                else if (ua.includes('android')) deviceName = "Android Phone 📱";
+                else if (ua.includes('iphone')) deviceName = "iPhone 📱";
+                else if (ua.includes('linux')) deviceName = "Linux Machine 🐧";
+
+                // Parse Browser
+                let browser = "Unknown Browser";
+                if (ua.includes('crios')) browser = "Chrome (iOS)";
+                else if (ua.includes('chrome')) browser = "Chrome";
+                else if (ua.includes('firefox')) browser = "Firefox";
+                else if (ua.includes('safari') && !ua.includes('chrome')) browser = "Safari";
+                else if (ua.includes('edge')) browser = "Edge";
+
+                Swal.fire({
+                    title: '<span class="text-xl font-bold text-slate-800">Account Active Elsewhere</span>',
+                    html: `
+                        <div class="bg-red-50 border border-red-100 rounded-xl p-5 mb-4 text-left shadow-inner">
+                            <p class="text-xs font-bold text-red-500 uppercase tracking-widest mb-3">⚠️ Active Session Details</p>
+                            
+                            <div class="space-y-2 text-sm text-slate-700">
+                                <div class="flex justify-between border-b border-red-100 pb-2">
+                                    <span class="font-medium">Device:</span>
+                                    <span class="font-bold text-slate-900">${deviceName}</span>
+                                </div>
+                                <div class="flex justify-between border-b border-red-100 pb-2">
+                                    <span class="font-medium">Browser:</span>
+                                    <span>${browser}</span>
+                                </div>
+                                <div class="flex justify-between border-b border-red-100 pb-2">
+                                    <span class="font-medium">IP Address:</span>
+                                    <span class="font-mono bg-white px-2 rounded border border-slate-200">${devInfo.ip}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="font-medium">Logged In:</span>
+                                    <span>${devInfo.loginTime ? new Date(devInfo.loginTime).toLocaleTimeString() : 'Just now'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-slate-600 text-sm">Force logging out will disconnect the other device immediately.</p>
+                    `,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#94a3b8',
+                    confirmButtonText: '⚡ Yes, Force Logout',
+                    cancelButtonText: 'Stay logged out',
+                    customClass: {
+                        popup: 'rounded-2xl shadow-xl',
+                        confirmButton: 'rounded-lg px-6 py-3 font-bold shadow-lg shadow-red-500/30',
+                        cancelButton: 'rounded-lg px-6 py-3 font-bold'
+                    }
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        try {
+                            await dispatch(login({ email, password, forceLogin: true })).unwrap();
+                            toast.success('Logged in successfully (Other session terminated)');
+                        } catch (forceErr) {
+                            toast.error(forceErr?.message || forceErr || "Force login failed");
+                        }
+                    }
+                });
+            } else {
+                toast.error(err?.message || err || 'Failed to login');
+            }
         }
     };
 

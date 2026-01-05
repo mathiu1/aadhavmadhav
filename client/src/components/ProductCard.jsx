@@ -5,10 +5,10 @@ import { FaShoppingCart, FaStar, FaRegHeart, FaHeart, FaSpinner } from 'react-ic
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../slices/cartSlice';
 import { toggleFavorite } from '../slices/authSlice';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { toast } from 'react-hot-toast';
 
-const ProductCard = ({ product }) => {
+const ProductCard = memo(({ product }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { userInfo } = useSelector((state) => state.auth);
@@ -77,6 +77,7 @@ const ProductCard = ({ product }) => {
                         <img
                             src={getImageUrl(product.image)}
                             alt={product.name}
+                            loading="lazy"
                             className={`max-h-full max-w-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110 ${product.countInStock === 0 ? 'grayscale opacity-70' : ''}`}
                         />
                     )}
@@ -140,6 +141,6 @@ const ProductCard = ({ product }) => {
             </div>
         </div>
     );
-};
+});
 
 export default ProductCard;

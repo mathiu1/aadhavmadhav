@@ -12,18 +12,62 @@ const sendSystemMessage = require('../utils/sendSystemMessage');
 const authUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
+    // Better IP extraction
+    let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    if (ip.includes(',')) ip = ip.split(',')[0].trim();
+    if (ip.includes('::ffff:')) ip = ip.replace('::ffff:', '');
+    if (ip === '::1') ip = '127.0.0.1 (Localhost)'; // Better display for dev
+
+    const device = req.headers['user-agent'];
+
     const user = await User.findOne({ email });
 
     if (user && (await user.matchPassword(password))) {
+        // Prevent concurrent login if user is already online
+        if (user.isOnline) {
+            if (req.body.forceLogin) {
+                // Force Logout for existing session
+                const io = req.app.get('io');
+                if (io) {
+                    io.emit('forceLogout', { userId: user._id });
+                }
+                // Proceed to login...
+            } else {
+                // Return 403 with Conflict Details
+                res.status(403).json({
+                    message: 'Account active on another device',
+                    deviceInfo: user.lastDeviceInfo || { device: 'Unknown', ip: 'Unknown' } // Send stored session info
+                });
+                return; // Stop execution
+            }
+        }
+
+        // Update User Metadata for THIS session
+        user.lastDeviceInfo = {
+            ip,
+            device,
+            loginTime: new Date()
+        };
+        // We do NOT set isOnline=true here, socket connection will do it. 
+        // ACTUALLY, if we don't set it, the subsequent check might fail if socket connects fast?
+        // No, socket connects AFTER this response.
+        // But if we forceLogin, the previous socket might still be cleaning up?
+        // Race condition: 'forceLogout' emitted -> Client A disconnects -> user.isOnline = false (via socket).
+        // Meanwhile Client B connects -> user.isOnline = true.
+        // Safe to just update metadata here.
+        // Increment token version to invalidate previous sessions
+        user.tokenVersion = (user.tokenVersion || 0) + 1;
+
+        await user.save();
+
         // Send automated welcome back message
-        // Don't await this to keep login fast
         sendSystemMessage(
             req,
             user._id,
             `Welcome back ${user.name}! 🛍️ Ready to shop? Check out our latest products!`
         );
 
-        generateToken(res, user._id);
+        generateToken(res, user._id, user.tokenVersion);
 
         res.json({
             _id: user._id,
@@ -65,7 +109,7 @@ const registerUser = asyncHandler(async (req, res) => {
             `Welcome to AadhavMadhav, ${user.name}! 🎉 Thanks for joining us. Happy shopping!`
         );
 
-        generateToken(res, user._id);
+        generateToken(res, user._id, user.tokenVersion);
 
         res.status(201).json({
             _id: user._id,
@@ -83,17 +127,17 @@ const registerUser = asyncHandler(async (req, res) => {
 // @desc    Get user profile
 // @route   GET /api/users/profile
 // @access  Private
+// @desc    Get user profile
+// @route   GET /api/users/profile
+// @access  Private
 const getUserProfile = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user._id);
+    // Select specific fields and use lean for performance
+    const user = await User.findById(req.user._id)
+        .select('_id name email isAdmin favorites')
+        .lean();
 
     if (user) {
-        res.json({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            isAdmin: user.isAdmin,
-            favorites: user.favorites,
-        });
+        res.json(user);
     } else {
         res.status(404);
         throw new Error('User not found');

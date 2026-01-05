@@ -293,6 +293,11 @@ export const CallContextProvider = ({ children }) => {
 
                 peer.on('stream', (currentRemoteStream) => {
                     setRemoteStream(currentRemoteStream);
+                    // Ensure audio plays if element ref exists
+                    if (audioRef.current) {
+                        audioRef.current.srcObject = currentRemoteStream;
+                        audioRef.current.play().catch(e => console.error("Auto-play failed:", e));
+                    }
                 });
 
                 peer.on('connect', () => {

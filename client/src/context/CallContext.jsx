@@ -250,7 +250,7 @@ export const CallContextProvider = ({ children }) => {
 
         navigator.mediaDevices.getUserMedia({
             video: false,
-            audio: true // Absolute simplest request. Let OS decide settings.
+            audio: true // Simplest possible request
         })
             .then((currentStream) => {
                 setStream(currentStream);
@@ -258,12 +258,11 @@ export const CallContextProvider = ({ children }) => {
 
                 const peer = new SimplePeer({
                     initiator: true,
-                    trickle: true, // Re-enable Trickle for Speed
+                    trickle: false, // DISABLE TRICKLE: Wait for all candidates to be gathered (More reliable on Mobile)
                     stream: currentStream,
                     config: {
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
-                            // Reduced list for faster gathering, kept TURN for reliability
                             { urls: 'stun:global.stun.twilio.com:3478' },
                             // FREE PUBLIC TURN (OpenRelay) - Guarantees connectivity through Symmetric NAT
                             {
@@ -273,6 +272,11 @@ export const CallContextProvider = ({ children }) => {
                             },
                             {
                                 urls: 'turn:openrelay.metered.ca:443',
+                                username: 'openrelayproject',
+                                credential: 'openrelayproject'
+                            },
+                            {
+                                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                                 username: 'openrelayproject',
                                 credential: 'openrelayproject'
                             },
@@ -368,19 +372,20 @@ export const CallContextProvider = ({ children }) => {
 
         navigator.mediaDevices.getUserMedia({
             video: false,
-            audio: true // Absolute simplest request.
+            audio: true // Simplest possible request to avoid OverconstrainedError
         })
             .then((currentStream) => {
                 setStream(currentStream);
 
                 const peer = new SimplePeer({
                     initiator: false,
-                    trickle: true, // Re-enable Trickle
+                    trickle: false, // DISABLE TRICKLE
                     stream: currentStream,
                     config: {
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
-                            // Reduced list for faster gathering, kept TURN for reliability
+                            { urls: 'stun:global.stun.twilio.com:3478' },
+                            // FREE PUBLIC TURN (OpenRelay) - Guarantees connectivity through Symmetric NAT
                             {
                                 urls: 'turn:openrelay.metered.ca:80',
                                 username: 'openrelayproject',
@@ -388,6 +393,11 @@ export const CallContextProvider = ({ children }) => {
                             },
                             {
                                 urls: 'turn:openrelay.metered.ca:443',
+                                username: 'openrelayproject',
+                                credential: 'openrelayproject'
+                            },
+                            {
+                                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                                 username: 'openrelayproject',
                                 credential: 'openrelayproject'
                             },

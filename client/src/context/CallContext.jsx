@@ -250,7 +250,13 @@ export const CallContextProvider = ({ children }) => {
 
         navigator.mediaDevices.getUserMedia({
             video: false,
-            audio: true // Simplest possible request
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                latency: { ideal: 0.05 }, // Target 50ms latency
+                sampleRate: { ideal: 48000 }
+            }
         })
             .then((currentStream) => {
                 setStream(currentStream);
@@ -258,11 +264,12 @@ export const CallContextProvider = ({ children }) => {
 
                 const peer = new SimplePeer({
                     initiator: true,
-                    trickle: false, // DISABLE TRICKLE: Wait for all candidates to be gathered (More reliable on Mobile)
+                    trickle: true, // Re-enable Trickle for Speed
                     stream: currentStream,
                     config: {
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
+                            // Reduced list for faster gathering, kept TURN for reliability
                             { urls: 'stun:global.stun.twilio.com:3478' },
                             // FREE PUBLIC TURN (OpenRelay) - Guarantees connectivity through Symmetric NAT
                             {
@@ -272,11 +279,6 @@ export const CallContextProvider = ({ children }) => {
                             },
                             {
                                 urls: 'turn:openrelay.metered.ca:443',
-                                username: 'openrelayproject',
-                                credential: 'openrelayproject'
-                            },
-                            {
-                                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                                 username: 'openrelayproject',
                                 credential: 'openrelayproject'
                             },
@@ -372,20 +374,25 @@ export const CallContextProvider = ({ children }) => {
 
         navigator.mediaDevices.getUserMedia({
             video: false,
-            audio: true // Simplest possible request to avoid OverconstrainedError
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                latency: { ideal: 0.05 },
+                sampleRate: { ideal: 48000 }
+            }
         })
             .then((currentStream) => {
                 setStream(currentStream);
 
                 const peer = new SimplePeer({
                     initiator: false,
-                    trickle: false, // DISABLE TRICKLE
+                    trickle: true, // Re-enable Trickle
                     stream: currentStream,
                     config: {
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
-                            { urls: 'stun:global.stun.twilio.com:3478' },
-                            // FREE PUBLIC TURN (OpenRelay) - Guarantees connectivity through Symmetric NAT
+                            // Reduced list for faster gathering, kept TURN for reliability
                             {
                                 urls: 'turn:openrelay.metered.ca:80',
                                 username: 'openrelayproject',
@@ -393,11 +400,6 @@ export const CallContextProvider = ({ children }) => {
                             },
                             {
                                 urls: 'turn:openrelay.metered.ca:443',
-                                username: 'openrelayproject',
-                                credential: 'openrelayproject'
-                            },
-                            {
-                                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                                 username: 'openrelayproject',
                                 credential: 'openrelayproject'
                             },

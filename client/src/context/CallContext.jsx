@@ -250,13 +250,7 @@ export const CallContextProvider = ({ children }) => {
 
         navigator.mediaDevices.getUserMedia({
             video: false,
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                latency: { ideal: 0.05 }, // Target 50ms latency
-                sampleRate: { ideal: 48000 }
-            }
+            audio: true // Absolute simplest request. Let OS decide settings.
         })
             .then((currentStream) => {
                 setStream(currentStream);
@@ -374,13 +368,7 @@ export const CallContextProvider = ({ children }) => {
 
         navigator.mediaDevices.getUserMedia({
             video: false,
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                latency: { ideal: 0.05 },
-                sampleRate: { ideal: 48000 }
-            }
+            audio: true // Absolute simplest request.
         })
             .then((currentStream) => {
                 setStream(currentStream);

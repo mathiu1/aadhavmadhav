@@ -29,6 +29,7 @@ export const CallContextProvider = ({ children }) => {
     const userVideo = useRef();
     const connectionRef = useRef();
     const timerRef = useRef();
+    const iceCandidatesBuffer = useRef([]); // Buffer for early candidates
 
     useEffect(() => {
         if (!socket) return;
@@ -167,6 +168,9 @@ export const CallContextProvider = ({ children }) => {
             // Feed incoming candidate to the peer connection
             if (connectionRef.current) {
                 connectionRef.current.signal(signal);
+            } else {
+                // Buffer it! The call hasn't started yet, but the candidates are arriving.
+                iceCandidatesBuffer.current.push(signal);
             }
         });
 
@@ -244,13 +248,7 @@ export const CallContextProvider = ({ children }) => {
 
         navigator.mediaDevices.getUserMedia({
             video: false,
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                latency: { ideal: 0.05 }, // 50ms ideal target
-                sampleRate: { ideal: 48000 }
-            }
+            audio: true // Simplest possible request
         })
             .then((currentStream) => {
                 setStream(currentStream);
@@ -258,20 +256,13 @@ export const CallContextProvider = ({ children }) => {
 
                 const peer = new SimplePeer({
                     initiator: true,
-                    trickle: true, // Enable Trickle
+                    trickle: true,
                     stream: currentStream,
                     config: {
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
-                            { urls: 'stun:stun1.l.google.com:19302' },
-                            { urls: 'stun:stun2.l.google.com:19302' },
                             { urls: 'stun:global.stun.twilio.com:3478' }
                         ],
-                        iceCandidatePoolSize: 10,
-                    },
-                    offerOptions: {
-                        offerToReceiveAudio: true,
-                        offerToReceiveVideo: false
                     }
                 });
 
@@ -354,33 +345,20 @@ export const CallContextProvider = ({ children }) => {
 
         navigator.mediaDevices.getUserMedia({
             video: false,
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                latency: { ideal: 0.05 }, // 50ms ideal target
-                sampleRate: { ideal: 48000 }
-            }
+            audio: true // Simplest possible request to avoid OverconstrainedError
         })
             .then((currentStream) => {
                 setStream(currentStream);
 
                 const peer = new SimplePeer({
                     initiator: false,
-                    trickle: true, // Enable Trickle
+                    trickle: true,
                     stream: currentStream,
                     config: {
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
-                            { urls: 'stun:stun1.l.google.com:19302' },
-                            { urls: 'stun:stun2.l.google.com:19302' },
                             { urls: 'stun:global.stun.twilio.com:3478' }
                         ],
-                        iceCandidatePoolSize: 10,
-                    },
-                    offerOptions: {
-                        offerToReceiveAudio: true,
-                        offerToReceiveVideo: false
                     }
                 });
 
@@ -419,6 +397,15 @@ export const CallContextProvider = ({ children }) => {
                 try {
                     if (callToAnswer.signal) {
                         peer.signal(callToAnswer.signal);
+
+                        // FLUSH BUFFER: Apply any candidates that arrived before we answered
+                        if (iceCandidatesBuffer.current.length > 0) {
+                            console.log(`Flushing ${iceCandidatesBuffer.current.length} buffered candidates`);
+                            iceCandidatesBuffer.current.forEach(cand => {
+                                peer.signal(cand);
+                            });
+                            iceCandidatesBuffer.current = [];
+                        }
                     } else {
                         throw new Error("Invalid call signal");
                     }

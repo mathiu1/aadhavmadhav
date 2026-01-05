@@ -262,6 +262,15 @@ io.on('connection', (socket) => {
         }
     });
 
+    // --- ICE Candidate Relay (Critical for Render/Cloud) ---
+    socket.on("iceCandidate", (data) => {
+        const { to, signal } = data; // 'to' is the Target User ID
+        const socketId = userSocketMap[to];
+        if (socketId) {
+            io.to(socketId).emit("iceCandidate", { signal, from: userId });
+        }
+    });
+
     socket.on("endCall", async (data) => {
         const userIdStr = userId.toString();
         // console.log(`[Socket] EndCall received from ${userIdStr} target ${data.to}`);
@@ -427,7 +436,7 @@ app.get('/api/ping', (req, res) => {
     res.send('API is running...');
 });
 
-
+//require("./ping.js");
 
 app.use('/api/users', require('./src/routes/userRoutes'));
 app.use('/api/products', require('./src/routes/productRoutes'));

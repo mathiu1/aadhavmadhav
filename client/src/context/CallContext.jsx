@@ -86,8 +86,17 @@ export const CallContextProvider = ({ children }) => {
 
         socket.on('callAccepted', (signal) => {
             setCallStatus('connected');
-            connectionRef.current.signal(signal);
+            if (connectionRef.current) {
+                connectionRef.current.signal(signal);
+            }
             // Timer starts only when peer fully connects
+        });
+
+        // Listen for Trickle ICE Candidates
+        socket.on('iceCandidate', (data) => {
+            if (connectionRef.current) {
+                connectionRef.current.signal(data.signal);
+            }
         });
 
         socket.on('callRejected', () => {

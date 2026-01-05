@@ -359,7 +359,7 @@ const CallOverlay = () => {
                     className="fixed bottom-6 right-6 z-[10000] bg-slate-900 border border-slate-700 rounded-[2rem] shadow-2xl p-6 w-80 overflow-hidden cursor-grab active:cursor-grabbing text-left"
                 >
                     {/* Audio Element */}
-                    <audio ref={audioRef} className="hidden" />
+                    <audio ref={audioRef} className="hidden" autoPlay playsInline />
 
                     <div className="flex items-center gap-4 mb-6">
                         <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700 relative">

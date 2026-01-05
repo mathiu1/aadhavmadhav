@@ -248,10 +248,8 @@ export const CallContextProvider = ({ children }) => {
                 echoCancellation: true,
                 noiseSuppression: true,
                 autoGainControl: true,
-                channelCount: 1,
-                sampleRate: 48000,
-                sampleSize: 16,
-                latency: 0
+                latency: { ideal: 0.05 }, // 50ms ideal target
+                sampleRate: { ideal: 48000 }
             }
         })
             .then((currentStream) => {
@@ -293,11 +291,6 @@ export const CallContextProvider = ({ children }) => {
 
                 peer.on('stream', (currentRemoteStream) => {
                     setRemoteStream(currentRemoteStream);
-                    // Ensure audio plays if element ref exists
-                    if (audioRef.current) {
-                        audioRef.current.srcObject = currentRemoteStream;
-                        audioRef.current.play().catch(e => console.error("Auto-play failed:", e));
-                    }
                 });
 
                 peer.on('connect', () => {
@@ -359,10 +352,8 @@ export const CallContextProvider = ({ children }) => {
                 echoCancellation: true,
                 noiseSuppression: true,
                 autoGainControl: true,
-                channelCount: 1,
-                sampleRate: 48000,
-                sampleSize: 16,
-                latency: 0
+                latency: { ideal: 0.05 }, // 50ms ideal target
+                sampleRate: { ideal: 48000 }
             }
         })
             .then((currentStream) => {

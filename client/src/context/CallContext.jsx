@@ -86,6 +86,8 @@ export const CallContextProvider = ({ children }) => {
         });
 
         socket.on('callAccepted', (signal) => {
+            console.log("Call Accepted signal received");
+            // toast.success("Connecting media..."); // Debug
             setCallStatus('connected');
             if (connectionRef.current) {
                 connectionRef.current.signal(signal);
@@ -256,7 +258,7 @@ export const CallContextProvider = ({ children }) => {
 
                 const peer = new SimplePeer({
                     initiator: true,
-                    trickle: true,
+                    trickle: false, // DISABLE TRICKLE: Wait for all candidates to be gathered (More reliable on Mobile)
                     stream: currentStream,
                     config: {
                         iceServers: [
@@ -277,8 +279,17 @@ export const CallContextProvider = ({ children }) => {
                                 urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                                 username: 'openrelayproject',
                                 credential: 'openrelayproject'
+                            },
+                            {
+                                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                                username: 'openrelayproject',
+                                credential: 'openrelayproject'
                             }
                         ],
+                    },
+                    offerOptions: {
+                        offerToReceiveAudio: true,
+                        offerToReceiveVideo: false
                     }
                 });
 
@@ -368,7 +379,7 @@ export const CallContextProvider = ({ children }) => {
 
                 const peer = new SimplePeer({
                     initiator: false,
-                    trickle: true,
+                    trickle: false, // DISABLE TRICKLE
                     stream: currentStream,
                     config: {
                         iceServers: [
@@ -389,8 +400,17 @@ export const CallContextProvider = ({ children }) => {
                                 urls: 'turn:openrelay.metered.ca:443?transport=tcp',
                                 username: 'openrelayproject',
                                 credential: 'openrelayproject'
+                            },
+                            {
+                                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                                username: 'openrelayproject',
+                                credential: 'openrelayproject'
                             }
                         ],
+                    },
+                    offerOptions: {
+                        offerToReceiveAudio: true,
+                        offerToReceiveVideo: false
                     }
                 });
 

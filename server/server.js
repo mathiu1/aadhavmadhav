@@ -14,7 +14,7 @@ const CallLog = require('./src/models/CallLog');
 dotenv.config();
 
 // Keep-alive ping
-require('./ping');
+//require('./ping');
 
 // Connect to database
 connectDB();

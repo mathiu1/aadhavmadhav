@@ -1,49 +1,56 @@
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
-import React, { useEffect, Suspense, lazy } from 'react';
-import { useDispatch } from 'react-redux';
-import { Toaster } from 'react-hot-toast';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Outlet,
+} from "react-router-dom";
+import React, { useEffect, Suspense, lazy } from "react";
+import { useDispatch } from "react-redux";
+import { Toaster } from "react-hot-toast";
 
-import Header from './components/Header';
+import Header from "./components/Header";
 // Eager load critical components
-const HomePage = lazy(() => import('./pages/HomePage'));
-const ProductPage = lazy(() => import('./pages/ProductPage'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const RegisterPage = lazy(() => import('./pages/RegisterPage'));
-const AllProductsPage = lazy(() => import('./pages/AllProductsPage'));
-const CartPage = lazy(() => import('./pages/CartPage'));
-const ShippingPage = lazy(() => import('./pages/ShippingPage'));
-const PaymentPage = lazy(() => import('./pages/PaymentPage'));
-const PlaceOrderPage = lazy(() => import('./pages/PlaceOrderPage'));
-const OrderSuccessPage = lazy(() => import('./pages/OrderSuccessPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const FavoritesPage = lazy(() => import('./pages/FavoritesPage'));
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
-const OrderDetailsPage = lazy(() => import('./pages/OrderDetailsPage'));
+const HomePage = lazy(() => import("./pages/HomePage"));
+const ProductPage = lazy(() => import("./pages/ProductPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const RegisterPage = lazy(() => import("./pages/RegisterPage"));
+const AllProductsPage = lazy(() => import("./pages/AllProductsPage"));
+const CartPage = lazy(() => import("./pages/CartPage"));
+const ShippingPage = lazy(() => import("./pages/ShippingPage"));
+const PaymentPage = lazy(() => import("./pages/PaymentPage"));
+const PlaceOrderPage = lazy(() => import("./pages/PlaceOrderPage"));
+const OrderSuccessPage = lazy(() => import("./pages/OrderSuccessPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+const OrderDetailsPage = lazy(() => import("./pages/OrderDetailsPage"));
 
 // Admin Pages - Lazy Load
-const OrderListPage = lazy(() => import('./pages/admin/OrderListPage'));
-const ProductListPage = lazy(() => import('./pages/admin/ProductListPage'));
-const ProductEditPage = lazy(() => import('./pages/admin/ProductEditPage'));
-const ProductAddPage = lazy(() => import('./pages/admin/ProductAddPage'));
-const UserListPage = lazy(() => import('./pages/admin/UserListPage'));
-const UserEditPage = lazy(() => import('./pages/admin/UserEditPage'));
-const DashboardPage = lazy(() => import('./pages/admin/DashboardPage'));
-const ReviewListPage = lazy(() => import('./pages/admin/ReviewListPage'));
-const ErrorLogPage = lazy(() => import('./pages/admin/ErrorLogPage'));
-const ContentManagerPage = lazy(() => import('./pages/admin/ContentManagerPage'));
-const CallHistoryPage = lazy(() => import('./pages/admin/CallHistoryPage'));
+const OrderListPage = lazy(() => import("./pages/admin/OrderListPage"));
+const ProductListPage = lazy(() => import("./pages/admin/ProductListPage"));
+const ProductEditPage = lazy(() => import("./pages/admin/ProductEditPage"));
+const ProductAddPage = lazy(() => import("./pages/admin/ProductAddPage"));
+const UserListPage = lazy(() => import("./pages/admin/UserListPage"));
+const UserEditPage = lazy(() => import("./pages/admin/UserEditPage"));
+const DashboardPage = lazy(() => import("./pages/admin/DashboardPage"));
+const ReviewListPage = lazy(() => import("./pages/admin/ReviewListPage"));
+const ErrorLogPage = lazy(() => import("./pages/admin/ErrorLogPage"));
+const ContentManagerPage = lazy(
+  () => import("./pages/admin/ContentManagerPage"),
+);
+const CallHistoryPage = lazy(() => import("./pages/admin/CallHistoryPage"));
 
-import AdminRoute from './components/AdminRoute';
-import AdminLayout from './components/AdminLayout';
-import NetworkStatus from './components/NetworkStatus';
-import ErrorBoundary from './components/ErrorBoundary';
+import AdminRoute from "./components/AdminRoute";
+import AdminLayout from "./components/AdminLayout";
+import NetworkStatus from "./components/NetworkStatus";
+import ErrorBoundary from "./components/ErrorBoundary";
 
-import { checkAuth } from './slices/authSlice';
-import api from './api/axios';
+import { checkAuth } from "./slices/authSlice";
+import api from "./api/axios";
 
-import ChatWidget from './components/ChatWidget';
-import ScrollToTop from './components/ScrollToTop';
-import CallOverlay from './components/CallOverlay';
+import ChatWidget from "./components/ChatWidget";
+import ScrollToTop from "./components/ScrollToTop";
+import CallOverlay from "./components/CallOverlay";
 
 // Loading Spinner for Suspense
 const LoadingFallback = () => (
@@ -67,14 +74,14 @@ function App() {
       }
 
       // 2. Track Visit with correct user type
-      const today = new Date().toISOString().split('T')[0];
-      const lastVisit = localStorage.getItem('lastVisitDate');
+      const today = new Date().toISOString().split("T")[0];
+      const lastVisit = localStorage.getItem("lastVisitDate");
 
       if (lastVisit !== today) {
-        const type = currentUser ? 'login' : 'guest';
+        const type = currentUser ? "login" : "guest";
         try {
-          await api.post('/analytics/visit', { type });
-          localStorage.setItem('lastVisitDate', today);
+          await api.post("/analytics/visit", { type });
+          localStorage.setItem("lastVisitDate", today);
         } catch (err) {
           // Silent fail
         }
@@ -104,25 +111,40 @@ function App() {
             <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 {/* Public Layout with Header and Footer */}
-                <Route element={
-                  <>
-                    <Header />
-                    <main className="flex-grow container mx-auto px-4 py-8">
-                      <Outlet />
-                    </main>
-                    <footer className="glass-panel py-8 text-center text-slate-500 mt-auto border-t border-slate-200">
-                      <div className="container mx-auto px-4">
-                        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                          <p>&copy; 2025 Aadhav Madhav Ecom. All rights reserved.</p>
-                          <div className="flex gap-4">
-                            <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
-                            <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
+                <Route
+                  element={
+                    <>
+                      <Header />
+                      <main className="flex-grow container mx-auto px-4 py-8">
+                        <Outlet />
+                      </main>
+                      <footer className="glass-panel py-8 text-center text-slate-500 mt-auto border-t border-slate-200">
+                        <div className="container mx-auto px-4">
+                          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                            <p>
+                              &copy; 2026 Aadhav Madhav Ecom. All rights
+                              reserved.
+                            </p>
+                            <div className="flex gap-4">
+                              <a
+                                href="#"
+                                className="hover:text-primary transition-colors"
+                              >
+                                Privacy Policy
+                              </a>
+                              <a
+                                href="#"
+                                className="hover:text-primary transition-colors"
+                              >
+                                Terms of Service
+                              </a>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </footer>
-                  </>
-                }>
+                      </footer>
+                    </>
+                  }
+                >
                   <Route path="/" element={<HomePage />} />
                   <Route path="/products" element={<AllProductsPage />} />
                   <Route path="/product/:id" element={<ProductPage />} />
@@ -144,9 +166,15 @@ function App() {
                   <Route path="admin" element={<AdminLayout />}>
                     <Route path="dashboard" element={<DashboardPage />} />
                     <Route path="products" element={<ProductListPage />} />
-                    <Route path="products/:pageNumber" element={<ProductListPage />} />
+                    <Route
+                      path="products/:pageNumber"
+                      element={<ProductListPage />}
+                    />
                     <Route path="product/add" element={<ProductAddPage />} />
-                    <Route path="product/:id/edit" element={<ProductEditPage />} />
+                    <Route
+                      path="product/:id/edit"
+                      element={<ProductEditPage />}
+                    />
                     <Route path="orders" element={<OrderListPage />} />
                     <Route path="users" element={<UserListPage />} />
                     <Route path="calls" element={<CallHistoryPage />} />
